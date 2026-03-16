@@ -1,0 +1,1070 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Exam Seating Arrangement — TKM College of Engineering</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+body{font-family:Arial,sans-serif;font-size:12pt;background:#f0f4f8;color:navy;}
+.hdr{background:#003366;color:white;padding:10px 20px;}
+.hdr h1{color:white;font-size:18pt;margin:0;}
+.hdr p{margin:0;font-size:10pt;color:#aac4e0;}
+.nav-tabs .nav-link{color:#003366;font-weight:bold;}
+.nav-tabs .nav-link.active{background:#003366;color:white;border-color:#003366;}
+.sec{background:#003366;color:white;padding:5px 14px;border-radius:4px;margin-bottom:10px;font-size:12pt;font-weight:bold;}
+.card{border:1px solid #aac;}
+.card-header{background:#dde8f0;font-weight:bold;color:#003366;border-bottom:2px solid #003366;}
+.form-label{font-weight:bold;color:#003366;font-size:11pt;}
+.form-control,.form-select{border:1px solid #7799bb;}
+.form-control:focus,.form-select:focus{border-color:#003366;box-shadow:0 0 0 2px rgba(0,51,102,.15);}
+.btn-primary{background:#003366;border-color:#003366;font-weight:bold;}
+.btn-primary:hover{background:#002244;border-color:#002244;}
+.btn-success{background:#1a6b1a;border-color:#1a6b1a;font-weight:bold;}
+.btn-danger{background:#990000;border-color:#990000;font-weight:bold;}
+.btn-warning{background:#cc7700;border-color:#cc7700;color:white;font-weight:bold;}
+.T1{width:100%;border-collapse:collapse;}
+.T1 th{background:#003366;color:white;padding:7px 10px;text-align:left;}
+.T1 td{color:navy;padding:6px 10px;border:1px solid #ccd;vertical-align:middle;}
+.T1 tbody tr:nth-child(even) td{background:#f5f8fc;}
+.T1 tbody tr:hover td{background:#e8eef5;}
+.spill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9pt;font-weight:bold;border:1px solid;}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:middle;}
+.stat-box{background:white;border:1px solid #aac;border-radius:5px;text-align:center;padding:7px 10px;}
+.stat-num{font-size:22pt;font-weight:bold;color:#003366;line-height:1.1;}
+.stat-lbl{font-size:9pt;color:#556;}
+.info-box{background:#ddeeff;border:1px solid #7799cc;color:#003366;padding:8px 14px;border-radius:4px;font-size:10.5pt;}
+.msg-ok{background:#d4edda;border:1px solid #28a745;color:#155724;padding:6px 12px;border-radius:4px;font-size:10.5pt;}
+.msg-err{background:#f8d7da;border:1px solid #dc3545;color:#721c24;padding:6px 12px;border-radius:4px;font-size:10.5pt;}
+/* seat grid */
+.sgrid{border-collapse:collapse;margin:0 auto;}
+.sgrid td{width:64px;height:72px;border:2px solid #7799bb;text-align:center;vertical-align:middle;font-size:8.5pt;cursor:pointer;background:#e8f0fb;padding:2px;}
+.sgrid td:hover{background:#c0d8f5;}
+.sgrid td.occ{cursor:default;}
+.sgrid td.blk{background:#ddd!important;cursor:pointer;}
+.sgrid td.blk:hover{background:#ccc!important;}
+.sgrid .lbl{background:none!important;border:none!important;font-weight:bold;color:#003366;font-size:9pt;width:24px;cursor:default!important;}
+.sn{display:block;font-weight:bold;color:#003366;font-size:9pt;}
+.sr{display:block;color:darkred;font-size:8pt;font-weight:bold;}
+.sm{display:block;font-size:7.5pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60px;}
+.ss{display:block;font-size:7pt;font-weight:bold;opacity:.85;}
+.blbl{text-align:center;background:#003366;color:white;font-weight:bold;padding:5px;letter-spacing:3px;border-radius:4px;margin-bottom:8px;font-size:10pt;}
+.seat-card-p{border:1px solid #003366;border-left:4px solid;padding:8px 10px;border-radius:4px;background:white;page-break-inside:avoid;}
+/* print area */
+#printArea{display:none;}
+#printArea.show{display:block;}
+@media print{
+  .no-print{display:none!important;}
+  body{background:white;}
+  #printArea{display:block!important;}
+  .hdr,.nav-tabs,#mainContent{display:none!important;}
+  .T1 th{background:#003366!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .blbl{background:#003366!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  .sgrid td{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+}
+</style>
+</head>
+<body>
+
+<div class="hdr no-print">
+  <h1>🎓 Exam Seating Arrangement System</h1>
+  <p>TKM College of Engineering</p>
+</div>
+
+<!-- PRINT AREA — hidden on screen, shown only when printing or previewing -->
+<div id="printArea">
+  <div id="pHdr" style="text-align:center;border-bottom:3px solid #003366;padding-bottom:10px;margin-bottom:16px;">
+    <h1 id="pTitle" style="margin:0;color:#003366;font-size:18pt;"></h1>
+    <p  id="pSub"   style="margin:4px 0 0;font-size:11pt;color:#555;"></p>
+  </div>
+  <div id="pBody"></div>
+</div>
+
+<div id="mainContent">
+<!-- STATS -->
+<div class="container-fluid pt-3 no-print">
+  <div class="row mb-3 g-2">
+    <div class="col-6 col-md-2"><div class="stat-box"><div class="stat-num" id="stStu">0</div><div class="stat-lbl">Students</div></div></div>
+    <div class="col-6 col-md-2"><div class="stat-box"><div class="stat-num" id="stSub">2</div><div class="stat-lbl">Subjects</div></div></div>
+    <div class="col-6 col-md-2"><div class="stat-box"><div class="stat-num" id="stHal">2</div><div class="stat-lbl">Halls</div></div></div>
+    <div class="col-6 col-md-2"><div class="stat-box"><div class="stat-num text-success" id="stAss">0</div><div class="stat-lbl">Assigned</div></div></div>
+    <div class="col-6 col-md-2"><div class="stat-box"><div class="stat-num text-danger" id="stPen">0</div><div class="stat-lbl">Pending</div></div></div>
+    <div class="col-6 col-md-2"><div class="stat-box"><div class="stat-num" id="stSea">60</div><div class="stat-lbl">Total Seats</div></div></div>
+  </div>
+  <!-- flash msg -->
+  <div id="flashMsg" style="display:none;" class="mb-2"></div>
+
+  <!-- TABS -->
+  <ul class="nav nav-tabs mb-3" id="mainTabs">
+    <li class="nav-item"><a class="nav-link active" href="#" onclick="showTab('setup');return false;">1. Setup</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('hall');return false;">2. Hall Layout</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('assign');return false;">3. Assignments</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('export');return false;">4. Export / Print</a></li>
+  </ul>
+
+  <!-- ══ TAB 1: SETUP ══ -->
+  <div id="tab-setup">
+    <div class="row g-3">
+      <div class="col-md-6">
+
+        <!-- Exam Info -->
+        <div class="card mb-3">
+          <div class="card-header">📋 Exam Information</div>
+          <div class="card-body">
+            <div class="row g-2">
+              <div class="col-8"><label class="form-label">Exam Name</label>
+                <input type="text" id="examName" class="form-control" value="Mid-Term Examination"></div>
+              <div class="col-4"><label class="form-label">Date</label>
+                <input type="date" id="examDate" class="form-control"></div>
+              <div class="col-12"><label class="form-label">Institution</label>
+                <input type="text" id="instName" class="form-control" value="TKM College of Engineering"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Subjects -->
+        <div class="card mb-3">
+          <div class="card-header">📚 Subjects</div>
+          <div class="card-body">
+            <div class="row g-2 mb-2">
+              <div class="col-7"><input type="text" id="subjIn" class="form-control" placeholder="Subject name" onkeydown="if(event.key==='Enter')addSubject()"></div>
+              <div class="col-5 d-flex align-items-center gap-1" id="colorSwatches"></div>
+              <div class="col-12"><button class="btn btn-primary w-100" onclick="addSubject()">+ Add Subject</button></div>
+            </div>
+            <div id="subjList"></div>
+          </div>
+        </div>
+
+        <!-- Students -->
+        <div class="card">
+          <div class="card-header">👥 Students</div>
+          <div class="card-body">
+            <div class="row g-2 mb-2">
+              <div class="col-3"><label class="form-label">Roll No</label>
+                <input type="text" id="rollIn" class="form-control" placeholder="R001" onkeydown="if(event.key==='Enter')addStudent()"></div>
+              <div class="col-5"><label class="form-label">Name</label>
+                <input type="text" id="nameIn" class="form-control" placeholder="Full Name" onkeydown="if(event.key==='Enter')addStudent()"></div>
+              <div class="col-4"><label class="form-label">Subject</label>
+                <select id="stuSubj" class="form-select"></select></div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-auto"><button class="btn btn-primary" onclick="addStudent()">+ Add</button></div>
+              <div class="col-auto"><button class="btn btn-secondary" onclick="toggleBulk()">📋 Bulk CSV</button></div>
+              <div class="col-auto"><button class="btn btn-danger" onclick="clearStudents()">🗑 Clear All</button></div>
+            </div>
+
+            <!-- Bulk section (inline, no modal) -->
+            <div id="bulkSec" style="display:none;border:2px solid #003366;border-radius:6px;padding:12px;margin-bottom:12px;background:#f5f8fc;">
+              <div style="font-weight:bold;color:#003366;margin-bottom:8px;">📋 Bulk CSV Import</div>
+              <div class="info-box mb-2" style="font-size:10pt;">
+                <b>Format:</b> <code>Roll, Name, Subject</code> — one per line<br>
+                <b>e.g.</b> R001, Umesh Kumar, Mathematics
+              </div>
+              <!-- FILE INPUT — plain, no modal wrapper -->
+              <div class="mb-2">
+                <label class="form-label mb-1">Upload CSV / TXT file:</label>
+                <input type="file" id="csvFile" accept=".csv,.txt,.tsv"
+                  style="display:block;width:100%;padding:5px;border:1px solid #7799bb;border-radius:4px;background:white;cursor:pointer;"
+                  onchange="onFileChange(this)">
+              </div>
+              <div class="text-center mb-2" style="color:#888;font-size:10pt;">— OR paste text below —</div>
+              <textarea id="bulkTxt" class="form-control mb-2" rows="6"
+                placeholder="R001, Umesh Kumar, Mathematics&#10;R002, Priya Nair, Physics&#10;R003, Anand Sharma"></textarea>
+              <div class="row g-2 align-items-center mb-2">
+                <div class="col-auto"><label class="form-label mb-0">Default Subject:</label></div>
+                <div class="col-auto"><select id="bulkSubj" class="form-select form-select-sm" style="width:200px;"></select></div>
+              </div>
+              <div id="bulkMsg" class="mb-2"></div>
+              <div class="row g-2">
+                <div class="col-auto"><button class="btn btn-primary" onclick="doBulk()">✓ Import Students</button></div>
+                <div class="col-auto"><button class="btn btn-secondary" onclick="toggleBulk()">✕ Close</button></div>
+              </div>
+            </div>
+
+            <div style="max-height:250px;overflow-y:auto;">
+              <!-- Select all + bulk delete bar -->
+              <div class="row g-2 align-items-center mb-1">
+                <div class="col-auto">
+                  <input type="checkbox" id="selAll" title="Select all" onchange="toggleSelectAll(this.checked)"
+                    style="width:16px;height:16px;cursor:pointer;">
+                  <label for="selAll" style="font-size:10pt;color:#003366;font-weight:bold;margin-left:4px;cursor:pointer;">Select All</label>
+                </div>
+                <div class="col-auto">
+                  <button class="btn btn-danger btn-sm" onclick="deleteSelected()" id="delSelBtn" disabled>
+                    🗑 Delete Selected (<span id="selCount">0</span>)
+                  </button>
+                </div>
+              </div>
+              <table class="T1" border="1"><thead><tr><th style="width:32px;"></th><th>#</th><th>Roll</th><th>Name</th><th>Subject</th><th>Del</th></tr></thead>
+              <tbody id="stuTb"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-md-6">
+        <!-- Halls -->
+        <div class="card mb-3">
+          <div class="card-header">🏛 Halls</div>
+          <div class="card-body">
+            <div class="row g-2 mb-2">
+              <div class="col-5"><input type="text" id="hallIn" class="form-control" placeholder="Hall name" onkeydown="if(event.key==='Enter')addHall()"></div>
+              <div class="col-3"><input type="number" id="hallR" class="form-control" value="5" min="1" max="26" placeholder="Rows"></div>
+              <div class="col-3"><input type="number" id="hallC" class="form-control" value="9" min="1" max="20" placeholder="Cols"></div>
+              <div class="col-1 d-flex align-items-end"><button class="btn btn-primary w-100 px-0" onclick="addHall()">+</button></div>
+            </div>
+            <div id="hallList"></div>
+          </div>
+        </div>
+
+        <!-- Pattern -->
+        <div class="card mb-3">
+          <div class="card-header">🔀 Seating Pattern</div>
+          <div class="card-body">
+            <table class="table table-bordered table-sm mb-2" style="font-size:10pt;">
+              <thead class="table-secondary"><tr><th>Pattern</th><th>Description</th><th>Select</th></tr></thead>
+              <tbody>
+                <tr style="background:#fff8e1;"><td><b>Column Order</b></td><td><b>A1-E1 same subject, A2-E2 next, A3-E3 next…</b> ✓ Recommended</td><td><input type="radio" name="pat" value="colorder" checked onchange="renderPrev()"></td></tr>
+                <tr><td><b>Subject Order</b></td><td>All of subject A first, then B, then C…</td><td><input type="radio" name="pat" value="subjorder" onchange="renderPrev()"></td></tr>
+                <tr><td><b>ABAB</b></td><td>Alternate every seat</td><td><input type="radio" name="pat" value="ABAB" onchange="renderPrev()"></td></tr>
+                <tr><td><b>AABB</b></td><td>Two together</td><td><input type="radio" name="pat" value="AABB" onchange="renderPrev()"></td></tr>
+                <tr><td><b>ABBA</b></td><td>Mirror</td><td><input type="radio" name="pat" value="ABBA" onchange="renderPrev()"></td></tr>
+                <tr><td><b>ABCABC</b></td><td>Three subjects cycling by seat</td><td><input type="radio" name="pat" value="ABCABC" onchange="renderPrev()"></td></tr>
+                <tr><td><b>Custom</b></td><td><input type="text" id="custPat" class="form-control form-control-sm" placeholder="e.g. AABBC" style="width:110px;display:inline;" oninput="renderPrev()"></td>
+                    <td><input type="radio" name="pat" value="custom" onchange="renderPrev()"></td></tr>
+              </tbody>
+            </table>
+            <div id="patLeg" class="mb-2"></div>
+            <div class="info-box mb-2"><b>Preview:</b><br><div id="patPrev" style="margin-top:5px;"></div></div>
+            <div class="row g-2">
+              <div class="col-auto"><button class="btn btn-success" onclick="assignActive()">⚡ Assign Active Hall</button></div>
+              <div class="col-auto"><button class="btn btn-primary" onclick="assignAll()">⚡⚡ Assign ALL</button></div>
+              <div class="col-auto"><button class="btn btn-danger" onclick="resetAll()">↩ Reset All</button></div>
+            </div>
+            <div id="assMsg" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 2: HALL LAYOUT ══ -->
+  <div id="tab-hall" style="display:none;">
+    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+      <div class="sec mb-0">🏛 Hall Layout</div>
+      <button class="btn btn-success" onclick="assignActive()">⚡ Assign</button>
+      <button class="btn btn-danger" onclick="clearActiveHall()">↩ Clear Hall</button>
+    </div>
+    <div id="hallTabs1" class="mb-2"></div>
+    <div class="card mb-3">
+      <div class="card-body py-2">
+        <div class="row g-2 align-items-center">
+          <div class="col-auto"><label class="form-label mb-0">Rows:</label></div>
+          <div class="col-auto"><input type="number" id="aR" class="form-control form-control-sm" style="width:65px;" min="1" max="26" onchange="resizeHall()"></div>
+          <div class="col-auto"><label class="form-label mb-0">Cols:</label></div>
+          <div class="col-auto"><input type="number" id="aC" class="form-control form-control-sm" style="width:65px;" min="1" max="20" onchange="resizeHall()"></div>
+          <div class="col-auto"><button class="btn btn-secondary btn-sm" onclick="clearBlocks()">Clear Blocks</button></div>
+          <div class="col-auto" id="capInfo" style="font-size:10pt;color:#003366;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="overflow-auto">
+      <div class="blbl" id="brdLbl">◀ FRONT / BOARD ▶</div>
+      <div id="gridWrap" class="text-center mb-2"></div>
+    </div>
+    <div id="gridLeg" class="mt-2"></div>
+  </div>
+
+  <!-- ══ TAB 3: ASSIGNMENTS ══ -->
+  <div id="tab-assign" style="display:none;">
+    <div class="sec">📋 Seat Assignments</div>
+    <div id="hallTabs2" class="mb-2"></div>
+    <div class="row g-2 mb-2">
+      <div class="col-auto"><button class="btn btn-success" onclick="assignActive()">⚡ Assign</button></div>
+      <div class="col-auto"><button class="btn btn-danger" onclick="clearActiveHall()">↩ Clear Hall</button></div>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="T1" border="1">
+        <thead><tr><th>S.No.</th><th>Roll No</th><th>Student Name</th><th>Subject</th><th>Hall</th><th>Seat</th><th>Remove</th></tr></thead>
+        <tbody id="assTb"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ TAB 4: EXPORT / PRINT ══ -->
+  <div id="tab-export" style="display:none;">
+    <div class="sec">📤 Export / Print</div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <div class="row g-2 mb-2">
+          <div class="col-12">
+            <div class="info-box" style="font-size:10.5pt;">
+              <b>How to print:</b> Click <b>Show Print Preview</b> below → the print layout will appear on screen → use your browser's <b>Ctrl+P</b> (Windows) or <b>Cmd+P</b> (Mac) to print it.
+            </div>
+          </div>
+        </div>
+        <div class="row g-2">
+          <div class="col-auto"><button class="btn btn-primary" onclick="showPrintPreview()">🖨 Show Print Preview</button></div>
+          <div class="col-auto"><button class="btn btn-secondary" onclick="hidePrintPreview()" id="hideBtn" style="display:none;">✕ Hide Preview</button></div>
+          <div class="col-auto"><button class="btn btn-success" onclick="doCSV()">⬇ Download CSV</button></div>
+        </div>
+        <div id="expMsg" class="mt-2"></div>
+      </div>
+    </div>
+
+    <!-- Print preview renders here (on screen) -->
+    <div id="previewWrap" style="display:none;">
+      <div id="previewBody" style="background:white;border:2px solid #003366;border-radius:6px;padding:20px;"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+</div><!-- /mainContent -->
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// ── DATA ──────────────────────────────────────
+const COLORS=[
+  {bg:'#dff0d8',bd:'#3c763d',fg:'#2d6a2d',dot:'#3c763d'},
+  {bg:'#d9edf7',bd:'#31708f',fg:'#1a5276',dot:'#31708f'},
+  {bg:'#fcf8e3',bd:'#8a6d3b',fg:'#7a5c2e',dot:'#c09233'},
+  {bg:'#f2dede',bd:'#a94442',fg:'#8b2e2e',dot:'#a94442'},
+  {bg:'#e8d5f5',bd:'#7b3fa0',fg:'#6a2d8f',dot:'#7b3fa0'},
+  {bg:'#fde8d8',bd:'#b05a1a',fg:'#8c4200',dot:'#c26a20'},
+  {bg:'#d5f0f0',bd:'#1a7070',fg:'#145858',dot:'#1a7070'},
+  {bg:'#fce4ec',bd:'#c2185b',fg:'#880e4f',dot:'#c2185b'},
+];
+const cc=ci=>COLORS[ci%COLORS.length];
+const sk=(r,c)=>r+'-'+c;
+const sl=(r,c)=>String.fromCharCode(65+r)+(c+1);
+
+let subjects=[{id:1,name:'Mathematics',ci:0},{id:2,name:'Physics',ci:1}];
+let halls=[{id:1,name:'Hall A',rows:5,cols:9,blocked:[]},{id:2,name:'Hall B',rows:5,cols:9,blocked:[]}];
+let students=[];
+let assigns={};
+let sid=3,hid=3,activeHall=1;
+
+// ── TABS ──────────────────────────────────────
+function showTab(t){
+  ['setup','hall','assign','export'].forEach(x=>{
+    document.getElementById('tab-'+x).style.display=x===t?'':'none';
+  });
+  document.querySelectorAll('#mainTabs .nav-link').forEach((a,i)=>{
+    a.classList.toggle('active',['setup','hall','assign','export'][i]===t);
+  });
+  if(t==='hall'){buildHTabs('hallTabs1');renderGrid();}
+  if(t==='assign'){buildHTabs('hallTabs2');renderAss();}
+  updateStats();
+}
+
+// ── FLASH ─────────────────────────────────────
+function flash(msg,type){
+  const el=document.getElementById('flashMsg');
+  el.className=type==='ok'?'msg-ok mb-2':'msg-err mb-2';
+  el.textContent=msg;
+  el.style.display='';
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.style.display='none',3500);
+}
+
+// ── SUBJECTS ──────────────────────────────────
+let selColor = 0; // currently selected colour index for new subject
+
+function initSwatches(){
+  const el = document.getElementById('colorSwatches'); if(!el) return;
+  el.innerHTML = '';
+  COLORS.forEach((c, i) => {
+    const used = subjects.some(s => s.ci === i);
+    const sel  = i === selColor;
+    const div  = document.createElement('div');
+    div.title  = `Color ${i+1}${used?' (in use)':''}`;
+    div.style.cssText = `width:22px;height:22px;border-radius:50%;background:${c.fg};cursor:pointer;
+      border:${sel?'3px solid #003366':'2px solid #fff'};
+      box-shadow:${sel?'0 0 0 2px '+c.fg:'0 1px 3px rgba(0,0,0,.3)'};
+      flex-shrink:0;transition:all .12s;opacity:${used&&!sel?.45:1};`;
+    div.onclick = () => { selColor = i; initSwatches(); };
+    el.appendChild(div);
+  });
+}
+
+function addSubject(){
+  const v=document.getElementById('subjIn').value.trim();
+  if(!v){flash('Enter subject name.','err');return;}
+  subjects.push({id:sid++, name:v, ci:selColor});
+  // auto-advance colour to next unused
+  const usedCi = new Set(subjects.map(s=>s.ci));
+  let next = (selColor+1) % COLORS.length;
+  for(let i=0;i<COLORS.length;i++){
+    if(!usedCi.has((selColor+1+i)%COLORS.length)){ next=(selColor+1+i)%COLORS.length; break; }
+  }
+  selColor = next;
+  document.getElementById('subjIn').value='';
+  initSwatches();
+  renderSubj();updateStats();
+}
+function delSubject(id){
+  if(subjects.length<=1){flash('Need at least one subject.','err');return;}
+  subjects=subjects.filter(s=>s.id!==id);
+  students=students.filter(s=>s.subjId!==id);
+  Object.keys(assigns).forEach(h=>{
+    assigns[h]=Object.fromEntries(Object.entries(assigns[h]||{}).filter(([,v])=>v.subjId!==id));
+  });
+  renderSubj();renderStu();updateStats();initSwatches();
+}
+function renderSubj(){
+  const el=document.getElementById('subjList');
+  el.innerHTML='';
+  subjects.forEach(s=>{
+    const c=cc(s.ci);
+    const cnt=students.filter(x=>x.subjId===s.id).length;
+    const asn=Object.values(assigns).flatMap(h=>Object.values(h)).filter(v=>v.subjId===s.id).length;
+    const d=document.createElement('div');
+    d.style.cssText=`display:flex;align-items:center;gap:8px;padding:6px 10px;border:1px solid ${c.bd};background:${c.bg};border-radius:4px;margin-bottom:5px;flex-wrap:wrap;`;
+    // editable name
+    const inp=document.createElement('input');
+    inp.type='text'; inp.value=s.name;
+    inp.style.cssText=`border:none;background:transparent;font-weight:bold;color:${c.fg};font-size:11pt;flex:1;min-width:80px;outline:none;border-bottom:1px dashed ${c.bd};`;
+    inp.title='Click to edit name';
+    inp.onchange=()=>{
+      s.name=inp.value.trim()||s.name;
+      // update assignment subjName
+      Object.values(assigns).forEach(h=>Object.values(h).forEach(a=>{if(a.subjId===s.id)a.subjName=s.name;}));
+      renderSubj();renderGrid();
+    };
+    // colour swatches
+    const swatchHtml=COLORS.map((col,i)=>
+      `<span data-ci="${i}" style="display:inline-block;width:16px;height:16px;border-radius:50%;background:${col.fg};cursor:pointer;
+        border:${i===s.ci?'2px solid #003366':'1px solid #fff'};
+        box-shadow:${i===s.ci?'0 0 0 1px '+col.fg:'none'};vertical-align:middle;flex-shrink:0;" title="Change colour"></span>`
+    ).join('');
+    const info=document.createElement('span');
+    info.style.cssText='font-size:9pt;color:#555;white-space:nowrap;';
+    info.textContent=`${cnt} | ${asn}`;
+    const swDiv=document.createElement('div');
+    swDiv.style.cssText='display:flex;gap:3px;flex-wrap:wrap;max-width:160px;';
+    swDiv.innerHTML=swatchHtml;
+    swDiv.querySelectorAll('[data-ci]').forEach(sw=>{
+      sw.onclick=()=>{
+        s.ci=+sw.dataset.ci;
+        Object.values(assigns).forEach(h=>Object.values(h).forEach(a=>{if(a.subjId===s.id)a.ci=s.ci;}));
+        renderSubj();renderGrid();renderPrev();initSwatches();
+      };
+    });
+    const b=document.createElement('button');
+    b.className='btn btn-danger btn-sm py-0';b.textContent='✕';b.onclick=()=>delSubject(s.id);
+    d.appendChild(inp);d.appendChild(info);d.appendChild(swDiv);d.appendChild(b);
+    el.appendChild(d);
+  });
+  ['stuSubj','bulkSubj'].forEach(id=>{
+    const sel=document.getElementById(id);if(!sel)return;
+    const cur=sel.value;
+    sel.innerHTML=subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    if(subjects.find(s=>String(s.id)===cur))sel.value=cur;
+  });
+  renderLeg();renderPrev();
+}
+
+// ── HALLS ─────────────────────────────────────
+function addHall(){
+  const name=document.getElementById('hallIn').value.trim()||`Hall ${String.fromCharCode(64+halls.length+1)}`;
+  const rows=Math.max(1,Math.min(26,+document.getElementById('hallR').value||5));
+  const cols=Math.max(1,Math.min(20,+document.getElementById('hallC').value||6));
+  halls.push({id:hid++,name,rows,cols,blocked:[]});
+  document.getElementById('hallIn').value='';
+  renderHalls();updateStats();
+}
+function delHall(id){
+  if(halls.length<=1){flash('Need at least one hall.','err');return;}
+  halls=halls.filter(h=>h.id!==id);
+  delete assigns[id];
+  if(activeHall===id)activeHall=halls[0].id;
+  renderHalls();updateStats();
+}
+function setHall(id){
+  activeHall=id;
+  renderHalls();buildHTabs('hallTabs1');buildHTabs('hallTabs2');
+  renderGrid();renderAss();updateStats();
+}
+function renderHalls(){
+  const el=document.getElementById('hallList');el.innerHTML='';
+  halls.forEach(h=>{
+    const cap=h.rows*h.cols-h.blocked.length;
+    const asn=Object.keys(assigns[h.id]||{}).length;
+    const act=h.id===activeHall;
+    const d=document.createElement('div');
+    d.style.cssText=`display:flex;align-items:center;gap:6px;padding:6px 10px;margin-bottom:5px;border:2px solid ${act?'#003366':'#aac'};background:${act?'#dde8f0':'white'};border-radius:4px;cursor:pointer;flex-wrap:wrap;`;
+    d.onclick=()=>setHall(h.id);
+
+    // Editable hall name
+    const nameInp=document.createElement('input');
+    nameInp.type='text'; nameInp.value=h.name;
+    nameInp.style.cssText='border:none;background:transparent;font-weight:bold;color:#003366;font-size:11pt;width:90px;outline:none;border-bottom:1px dashed #7799bb;cursor:text;';
+    nameInp.title='Click to edit hall name';
+    nameInp.onclick=e=>e.stopPropagation();
+    nameInp.onchange=()=>{
+      h.name=nameInp.value.trim()||h.name;
+      buildHTabs('hallTabs1');buildHTabs('hallTabs2');
+    };
+
+    // Editable rows
+    const rowInp=document.createElement('input');
+    rowInp.type='number'; rowInp.value=h.rows; rowInp.min=1; rowInp.max=26;
+    rowInp.style.cssText='width:46px;border:1px solid #7799bb;border-radius:3px;padding:2px 4px;font-size:10pt;text-align:center;';
+    rowInp.title='Rows';
+    rowInp.onclick=e=>e.stopPropagation();
+    rowInp.onchange=()=>{
+      h.rows=Math.max(1,Math.min(26,+rowInp.value||h.rows));
+      delete assigns[h.id];
+      renderHalls();renderGrid();updateStats();
+    };
+
+    // Editable cols
+    const colInp=document.createElement('input');
+    colInp.type='number'; colInp.value=h.cols; colInp.min=1; colInp.max=20;
+    colInp.style.cssText='width:46px;border:1px solid #7799bb;border-radius:3px;padding:2px 4px;font-size:10pt;text-align:center;';
+    colInp.title='Columns';
+    colInp.onclick=e=>e.stopPropagation();
+    colInp.onchange=()=>{
+      h.cols=Math.max(1,Math.min(20,+colInp.value||h.cols));
+      delete assigns[h.id];
+      renderHalls();renderGrid();updateStats();
+    };
+
+    const sep=document.createElement('span');
+    sep.textContent='×'; sep.style.cssText='color:#555;font-size:10pt;';
+
+    const info=document.createElement('span');
+    info.style.cssText='font-size:9pt;color:#555;white-space:nowrap;flex:1;';
+    info.textContent=`${asn}/${cap} seats`;
+
+    const b=document.createElement('button');
+    b.className='btn btn-danger btn-sm py-0';b.textContent='✕';
+    b.onclick=e=>{e.stopPropagation();delHall(h.id);};
+
+    d.appendChild(nameInp);d.appendChild(rowInp);d.appendChild(sep);
+    d.appendChild(colInp);d.appendChild(info);d.appendChild(b);
+    el.appendChild(d);
+  });
+  updateStats();
+}
+function buildHTabs(cid){
+  const el=document.getElementById(cid);if(!el)return;
+  el.innerHTML='';
+  halls.forEach(h=>{
+    const b=document.createElement('button');
+    b.className=`btn btn-sm me-1 mb-1 ${h.id===activeHall?'btn-primary':'btn-outline-primary'}`;
+    b.textContent=h.name;b.onclick=()=>setHall(h.id);
+    el.appendChild(b);
+  });
+}
+
+// ── STUDENTS ──────────────────────────────────
+function addStudent(){
+  const name=document.getElementById('nameIn').value.trim();
+  if(!name){flash('Enter student name.','err');return;}
+  const roll=document.getElementById('rollIn').value.trim()||`R${String(students.length+1).padStart(3,'0')}`;
+  const subjId=+document.getElementById('stuSubj').value;
+  students.push({id:roll+'_'+Date.now(),name,roll,subjId});
+  document.getElementById('nameIn').value='';document.getElementById('rollIn').value='';
+  renderStu();renderSubj();updateStats();
+}
+function delStudent(id){
+  students=students.filter(s=>s.id!==id);
+  Object.keys(assigns).forEach(h=>{
+    assigns[h]=Object.fromEntries(Object.entries(assigns[h]||{}).filter(([,v])=>v.studentId!==id));
+  });
+  renderStu();renderSubj();updateStats();
+}
+function clearStudents(){
+  students=[];assigns={};renderStu();renderSubj();updateStats();
+}
+function renderStu(){
+  const tb=document.getElementById('stuTb');tb.innerHTML='';
+  if(!students.length){
+    tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#888;font-size:10pt;">No students yet.</td></tr>';
+    updateSelCount();return;
+  }
+  students.forEach((s,i)=>{
+    const sub=subjects.find(x=>x.id===s.subjId);
+    const c=sub?cc(sub.ci):{bg:'white',bd:'#aaa',fg:'#333'};
+    const tr=document.createElement('tr');
+    // checkbox cell
+    const tdCk=document.createElement('td');tdCk.style.textAlign='center';
+    const ck=document.createElement('input');
+    ck.type='checkbox'; ck.dataset.id=s.id;
+    ck.style.cssText='width:15px;height:15px;cursor:pointer;';
+    ck.onchange=updateSelCount;
+    tdCk.appendChild(ck);tr.appendChild(tdCk);
+    tr.innerHTML+=`<td>${i+1}</td>
+      <td style="font-family:monospace;">${s.roll}</td>
+      <td>${s.name}</td>
+      <td><span class="spill" style="background:${c.bg};border-color:${c.bd};color:${c.fg};">${sub?sub.name:'—'}</span></td>`;
+    const td=document.createElement('td');
+    const b=document.createElement('button');
+    b.className='btn btn-danger btn-sm py-0';b.textContent='✕';b.onclick=()=>delStudent(s.id);
+    td.appendChild(b);tr.appendChild(td);tb.appendChild(tr);
+    // re-attach checkbox (innerHTML wipes it)
+    tr.cells[0].appendChild(ck);
+  });
+  updateSelCount();
+}
+
+function updateSelCount(){
+  const checked=document.querySelectorAll('#stuTb input[type=checkbox]:checked');
+  const n=checked.length;
+  const sc=document.getElementById('selCount');if(sc)sc.textContent=n;
+  const btn=document.getElementById('delSelBtn');if(btn)btn.disabled=n===0;
+  // sync select-all checkbox state
+  const all=document.querySelectorAll('#stuTb input[type=checkbox]');
+  const sa=document.getElementById('selAll');
+  if(sa){sa.checked=all.length>0&&checked.length===all.length;sa.indeterminate=checked.length>0&&checked.length<all.length;}
+}
+
+function toggleSelectAll(checked){
+  document.querySelectorAll('#stuTb input[type=checkbox]').forEach(ck=>ck.checked=checked);
+  updateSelCount();
+}
+
+function deleteSelected(){
+  const ids=new Set([...document.querySelectorAll('#stuTb input[type=checkbox]:checked')].map(ck=>ck.dataset.id));
+  if(!ids.size)return;
+  students=students.filter(s=>!ids.has(s.id));
+  Object.keys(assigns).forEach(h=>{
+    assigns[h]=Object.fromEntries(Object.entries(assigns[h]||{}).filter(([,v])=>!ids.has(v.studentId)));
+  });
+  // uncheck select-all
+  const sa=document.getElementById('selAll');if(sa)sa.checked=false;
+  renderStu();renderSubj();updateStats();
+}
+
+// ── BULK CSV ──────────────────────────────────
+function toggleBulk(){
+  const sec=document.getElementById('bulkSec');
+  const open=sec.style.display!=='none';
+  sec.style.display=open?'none':'';
+  if(!open){
+    document.getElementById('bulkSubj').innerHTML=subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
+    document.getElementById('bulkMsg').innerHTML='';
+    document.getElementById('bulkTxt').value='';
+  }
+}
+function onFileChange(input){
+  // FileReader works fine in real browsers — this is standard HTML5 API
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    document.getElementById('bulkTxt').value=e.target.result;
+    document.getElementById('bulkMsg').innerHTML='<div class="msg-ok">✓ File loaded — click Import Students.</div>';
+  };
+  reader.onerror=()=>{
+    document.getElementById('bulkMsg').innerHTML='<div class="msg-err">✗ Could not read file. Try pasting the text instead.</div>';
+  };
+  reader.readAsText(file);
+}
+function doBulk(){
+  const text=document.getElementById('bulkTxt').value.trim();
+  if(!text){
+    document.getElementById('bulkMsg').innerHTML='<div class="msg-err">Please paste data or upload a file.</div>';return;
+  }
+  const defId=+document.getElementById('bulkSubj').value;
+  let n=0,skip=0;
+  text.split('\n').forEach(line=>{
+    line=line.trim();if(!line)return;
+    const p=line.includes('\t')?line.split('\t').map(x=>x.trim()):line.split(',').map(x=>x.trim());
+    const roll=p[0]||'',name=p[1]||'';
+    if(!name){skip++;return;}
+    let subjId=defId;
+    if(p[2]){const v=p[2].toLowerCase();const m=subjects.find(s=>s.name.toLowerCase().includes(v)||v.includes(s.name.toLowerCase()));if(m)subjId=m.id;}
+    students.push({id:(roll||'S')+'_'+Date.now()+'_'+n,name,roll:roll||`R${String(students.length+1).padStart(3,'0')}`,subjId});n++;
+  });
+  document.getElementById('bulkTxt').value='';
+  const fi=document.getElementById('csvFile');if(fi)fi.value='';
+  renderStu();renderSubj();updateStats();
+  document.getElementById('bulkMsg').innerHTML=`<div class="msg-ok">✓ ${n} student(s) imported${skip?' · '+skip+' skipped':''}.</div>`;
+  if(n>0)setTimeout(()=>{document.getElementById('bulkSec').style.display='none';},1800);
+}
+
+// ── PATTERN ───────────────────────────────────
+function getPat(){
+  const r=document.querySelector('input[name="pat"]:checked');
+  if(!r)return'colorder';
+  if(r.value==='custom')return(document.getElementById('custPat').value||'ABAB').toUpperCase().replace(/[^A-Z]/g,'');
+  return r.value;
+}
+function renderLeg(){
+  document.getElementById('patLeg').innerHTML=subjects.map((s,i)=>{const c=cc(s.ci);
+    return`<span class="spill me-1" style="background:${c.bg};border-color:${c.bd};color:${c.fg};"><b>${String.fromCharCode(65+i)}</b>=${s.name}</span>`;
+  }).join('');
+}
+function renderPrev(){
+  const pat=getPat();
+  const el=document.getElementById('patPrev');
+  if(pat==='colorder'){
+    // Show 3 columns × 5 rows preview: col1=A, col2=B, col3=C, col4=A...
+    let html='<div style="display:inline-flex;gap:4px;">';
+    for(let c=0;c<6;c++){
+      const si=c%subjects.length;const s=subjects[si];const cc2=cc(s.ci);
+      const ch=String.fromCharCode(65+si);
+      html+=`<div style="display:flex;flex-direction:column;gap:2px;">`;
+      for(let r=0;r<5;r++){
+        html+=`<span style="display:block;width:26px;height:18px;line-height:18px;text-align:center;background:${cc2.bg};border:1px solid ${cc2.bd};color:${cc2.fg};border-radius:3px;font-size:8pt;font-weight:bold;">${ch}</span>`;
+      }
+      html+=`<div style="text-align:center;font-size:8pt;color:#555;margin-top:2px;">${c+1}</div></div>`;
+    }
+    html+='</div>';
+    el.innerHTML=html;return;
+  }
+  if(pat==='subjorder'){
+    const perSubj=Math.ceil(12/Math.max(subjects.length,1));
+    el.innerHTML=subjects.flatMap((s,i)=>{
+      const c=cc(s.ci),ch=String.fromCharCode(65+i);
+      return Array.from({length:perSubj},()=>`<span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};border-radius:3px;font-size:9pt;font-weight:bold;margin:2px;">${ch}</span>`);
+    }).slice(0,12).join('');
+    return;
+  }
+  el.innerHTML=Array.from({length:12},(_,i)=>{
+    const ch=pat[i%pat.length]||'A',idx=ch.charCodeAt(0)-65;
+    const s=subjects[idx%subjects.length],c=s?cc(s.ci):{bg:'#eee',bd:'#999',fg:'#333'};
+    return`<span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};border-radius:3px;font-size:9pt;font-weight:bold;margin:2px;">${ch}</span>`;
+  }).join('');
+}
+
+// ── ASSIGN ────────────────────────────────────
+function allAssigned(){return new Set(Object.values(assigns).flatMap(h=>Object.values(h).map(a=>a.studentId)));}
+function fillHall(hall){
+  const blk=new Set(hall.blocked),ex=assigns[hall.id]||{};
+  const used=allAssigned();
+  const pat=getPat();
+  const newA={};
+
+  if(pat==='colorder'){
+    // Each column gets one subject cycling: col0=subj0, col1=subj1, col2=subj2, col3=subj0...
+    // Build per-subject queues in serial (roll) order
+    const qs=subjects.map(sub=>
+      students.filter(s=>s.subjId===sub.id&&!used.has(s.id))
+        .map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci}))
+    );
+    const qs2=qs.map(q=>[...q]);
+    for(let c=0;c<hall.cols;c++){
+      const si=c%subjects.length; // which subject fills this column
+      for(let r=0;r<hall.rows;r++){
+        const k=sk(r,c);
+        if(blk.has(k)||ex[k])continue;
+        if(qs2[si]?.length) newA[k]=qs2[si].shift();
+      }
+    }
+  } else if(pat==='subjorder'){
+    const seats=[];
+    for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])seats.push(k);}
+    const allQueue=subjects.flatMap(sub=>
+      students.filter(s=>s.subjId===sub.id&&!used.has(s.id))
+        .map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci}))
+    );
+    seats.forEach((seat,i)=>{if(allQueue[i])newA[seat]=allQueue[i];});
+  } else {
+    const seats=[];
+    for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])seats.push(k);}
+    const patArr=pat.split('').map(ch=>ch.charCodeAt(0)-65);
+    const qs=subjects.map(sub=>students.filter(s=>s.subjId===sub.id&&!used.has(s.id)).map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci})));
+    const qs2=qs.map(q=>[...q]);let pi=0;
+    for(const seat of seats){let ok=false;
+      for(let a=0;a<patArr.length;a++){const sl2=patArr[(pi+a)%patArr.length];
+        if(qs2[sl2]?.length){newA[seat]=qs2[sl2].shift();pi=(pi+a+1)%patArr.length;ok=true;break;}}
+      if(!ok)break;}
+  }
+  assigns[hall.id]={...ex,...newA};
+}
+function assignActive(){
+  const h=halls.find(x=>x.id===activeHall);if(!h)return;
+  if(!students.length){flash('No students to assign.','err');return;}
+  fillHall(h);renderGrid();renderAss();updateStats();
+  flash('✓ Assigned to '+h.name,'ok');
+}
+function assignAll(){
+  if(!students.length){flash('No students added.','err');return;}
+  assigns={};halls.forEach(h=>fillHall(h));
+  renderGrid();renderAss();updateStats();
+  flash('✓ All halls assigned! '+allAssigned().size+' students seated.','ok');
+}
+function clearActiveHall(){delete assigns[activeHall];renderGrid();renderAss();updateStats();}
+function resetAll(){assigns={};renderGrid();renderAss();updateStats();}
+function removeAssign(hallId,key){if(assigns[hallId])delete assigns[hallId][key];renderAss();renderGrid();updateStats();}
+
+// ── GRID ──────────────────────────────────────
+function renderGrid(){
+  const h=halls.find(x=>x.id===activeHall);if(!h)return;
+  document.getElementById('aR').value=h.rows;
+  document.getElementById('aC').value=h.cols;
+  const blk=new Set(h.blocked),occ=assigns[h.id]||{};
+  const used=Object.keys(occ).length,cap=h.rows*h.cols-h.blocked.length;
+  document.getElementById('brdLbl').textContent=`◀  FRONT / BOARD — ${h.name}  ▶`;
+  document.getElementById('capInfo').innerHTML=`<b>Total:</b> ${h.rows*h.cols} | <b>Blocked:</b> ${h.blocked.length} | <b>Free:</b> ${cap-used} | <b>Assigned:</b> <span style="color:green;">${used}</span>`;
+  const tbl=document.createElement('table');tbl.className='sgrid';tbl.border=1;
+  const hr=tbl.insertRow();const th0=hr.insertCell();th0.className='lbl';th0.style.border='none';
+  for(let c=0;c<h.cols;c++){const th=hr.insertCell();th.className='lbl';th.textContent=c+1;}
+  for(let r=0;r<h.rows;r++){
+    const row=tbl.insertRow();
+    const rl=row.insertCell();rl.className='lbl';rl.textContent=String.fromCharCode(65+r);
+    for(let c=0;c<h.cols;c++){
+      const key=sk(r,c),entry=occ[key],isBlk=blk.has(key);
+      const td=row.insertCell();
+      if(entry){const col=cc(entry.ci||0);td.className='occ';td.style.background=col.bg;td.style.borderColor=col.bd;
+        td.title=`${entry.roll} — ${entry.name}`;
+        td.innerHTML=`<span class="sn">${sl(r,c)}</span><span class="sr" style="color:${col.fg};">${entry.roll}</span><span class="sm" style="color:${col.fg};">${entry.name.split(' ')[0]}</span><span class="ss" style="color:${col.fg};">${entry.subjName}</span>`;
+      }else if(isBlk){td.className='blk';td.innerHTML='<span style="font-size:13pt;color:#bbb;">✕</span>';td.onclick=()=>toggleBlock(r,c);}
+      else{td.innerHTML=`<span class="sn">${sl(r,c)}</span>`;td.onclick=()=>toggleBlock(r,c);}
+    }
+  }
+  const w=document.getElementById('gridWrap');w.innerHTML='';w.appendChild(tbl);
+  let leg='<b style="font-size:10pt;">Legend: </b>';
+  leg+=`<span style="display:inline-block;width:14px;height:14px;background:#e8f0fb;border:1px solid #7799bb;vertical-align:middle;margin:0 4px;border-radius:2px;"></span>Available `;
+  subjects.forEach(s=>{const c=cc(s.ci);leg+=`<span style="display:inline-block;width:14px;height:14px;background:${c.bg};border:1px solid ${c.bd};vertical-align:middle;margin:0 4px;border-radius:2px;"></span>${s.name} `;});
+  leg+=`<span style="display:inline-block;width:14px;height:14px;background:#ddd;border:1px solid #999;vertical-align:middle;margin:0 4px;border-radius:2px;"></span>Blocked`;
+  document.getElementById('gridLeg').innerHTML=leg;
+}
+function toggleBlock(r,c){
+  const h=halls.find(x=>x.id===activeHall);if(!h)return;
+  const key=sk(r,c);if((assigns[h.id]||{})[key])return;
+  const i=h.blocked.indexOf(key);
+  if(i>=0)h.blocked.splice(i,1);else h.blocked.push(key);
+  renderGrid();
+}
+function clearBlocks(){const h=halls.find(x=>x.id===activeHall);if(h){h.blocked=[];renderGrid();}}
+function resizeHall(){
+  const h=halls.find(x=>x.id===activeHall);if(!h)return;
+  h.rows=Math.max(1,Math.min(26,+document.getElementById('aR').value||5));
+  h.cols=Math.max(1,Math.min(20,+document.getElementById('aC').value||6));
+  delete assigns[activeHall];renderGrid();renderHalls();updateStats();
+}
+
+// ── ASSIGNMENTS TABLE ─────────────────────────
+function renderAss(){
+  const tb=document.getElementById('assTb');tb.innerHTML='';
+  const h=halls.find(x=>x.id===activeHall);if(!h)return;
+  const occ=assigns[h.id]||{};
+  const entries=Object.entries(occ).map(([key,val])=>{const[r,c]=key.split('-').map(Number);return{key,seat:sl(r,c),r,c,...val};}).sort((a,b)=>a.seat.localeCompare(b.seat));
+  if(!entries.length){tb.innerHTML=`<tr><td colspan="7" style="text-align:center;color:#888;font-size:10pt;">No assignments in ${h.name}. Click ⚡ Assign.</td></tr>`;return;}
+  entries.forEach((e,i)=>{
+    const sub=subjects.find(s=>s.id===e.subjId);const c=sub?cc(sub.ci):{bg:'white',bd:'#aaa',fg:'#333'};
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${i+1}</td><td style="font-family:monospace;">${e.roll}</td><td>${e.name}</td>
+      <td><span class="spill" style="background:${c.bg};border-color:${c.bd};color:${c.fg};">${e.subjName}</span></td>
+      <td>${h.name}</td><td style="font-family:monospace;font-weight:bold;color:#003366;">${e.seat}</td>`;
+    const td=document.createElement('td');const b=document.createElement('button');
+    b.className='btn btn-danger btn-sm py-0';b.textContent='✕';b.onclick=()=>removeAssign(h.id,e.key);
+    td.appendChild(b);tr.appendChild(td);tb.appendChild(tr);
+  });
+}
+
+// ── BUILD PRINT HTML ──────────────────────────
+// Helper: compute seat ranges grouped by subject e.g. "1-5, 7-9 (Mathematics)"
+function seatRanges(entries){
+  // group consecutive serial numbers by subject
+  const groups=[];
+  let cur=null;
+  entries.forEach((e,i)=>{
+    const sno=i+1;
+    if(!cur||cur.subjId!==e.subjId||sno!==cur.end+1){
+      cur={subjId:e.subjId,subjName:e.subjName,start:sno,end:sno};groups.push(cur);
+    } else { cur.end=sno; }
+  });
+  return groups;
+}
+
+function buildPrintHTML(){
+  const examN=document.getElementById('examName').value||'Exam';
+  const instN=document.getElementById('instName').value||'';
+  const dateV=document.getElementById('examDate').value;
+  const dateS=dateV?new Date(dateV+'T00:00:00').toLocaleDateString('en-IN',{dateStyle:'long'}):'';
+  let hasData=false;
+  let body='';
+
+  // Helper: compute roll number ranges e.g. R001–R015
+  function rollRanges(rolls){
+    // Just show first and last roll of each group
+    if(!rolls.length)return'';
+    if(rolls.length===1)return rolls[0];
+    return rolls[0]+' – '+rolls[rolls.length-1];
+  }
+
+  // ── ALL HALLS SUMMARY — one page ──
+  const allHallsHaveData=halls.some(h=>Object.keys(assigns[h.id]||{}).length>0);
+  if(allHallsHaveData){
+    body+=`<div style="page-break-after:always;">`;
+    body+=`<h2 style="color:#003366;border-bottom:3px solid #003366;padding-bottom:6px;margin-bottom:14px;">All Halls — Subject Summary</h2>`;
+    halls.forEach(hall=>{
+      const occ=assigns[hall.id]||{};
+      const hallEntries=Object.entries(occ).map(([key,val])=>{
+        const[r,c]=key.split('-').map(Number);return{key,seat:sl(r,c),r,c,...val};
+      }).sort((a,b)=>a.seat.localeCompare(b.seat));
+      if(!hallEntries.length)return;
+      body+=`<h3 style="color:#003366;margin-top:14px;margin-bottom:6px;">${hall.name}</h3>`;
+      const subjData={};
+      hallEntries.forEach(e=>{
+        if(!subjData[e.subjId])subjData[e.subjId]={name:e.subjName,ci:e.ci,rolls:[],count:0};
+        subjData[e.subjId].rolls.push(e.roll);
+        subjData[e.subjId].count++;
+      });
+      body+=`<table border="1" style="border-collapse:collapse;width:100%;margin-bottom:8px;font-size:10.5pt;">
+        <thead><tr style="background:#003366;color:white;">
+          <th style="padding:6px 14px;text-align:left;">Subject</th>
+          <th style="padding:6px 14px;text-align:center;">No. of Students</th>
+          <th style="padding:6px 14px;text-align:left;">Roll Number Range</th>
+        </tr></thead><tbody>`;
+      Object.values(subjData).forEach(s=>{
+        const c=cc(s.ci);
+        body+=`<tr>
+          <td style="padding:6px 14px;"><span style="background:${c.bg};border:1px solid ${c.bd};color:${c.fg};padding:2px 10px;border-radius:8px;font-weight:bold;">${s.name}</span></td>
+          <td style="padding:6px 14px;text-align:center;font-weight:bold;font-size:13pt;">${s.count}</td>
+          <td style="padding:6px 14px;font-family:monospace;font-weight:bold;font-size:10pt;">${rollRanges(s.rolls)}</td>
+        </tr>`;
+      });
+      const totalInHall=Object.values(subjData).reduce((s,x)=>s+x.count,0);
+      body+=`<tr style="background:#dde8f0;font-weight:bold;">
+        <td style="padding:6px 14px;">Total</td>
+        <td style="padding:6px 14px;text-align:center;font-size:13pt;">${totalInHall}</td>
+        <td style="padding:6px 14px;"></td>
+      </tr></tbody></table>`;
+    });
+    body+=`</div>`;
+  }
+
+  halls.forEach(hall=>{
+    const occ=assigns[hall.id]||{};
+    const entries=Object.entries(occ).map(([key,val])=>{
+      const[r,c]=key.split('-').map(Number);return{key,seat:sl(r,c),r,c,...val};
+    }).sort((a,b)=>a.seat.localeCompare(b.seat));
+    if(!entries.length)return;
+    hasData=true;
+
+    // ── Hall heading ──
+    body+=`<h2 style="color:#003366;border-bottom:2px solid #003366;margin-top:18px;padding-bottom:4px;">${hall.name}</h2>`;
+
+    // ── Per-hall subject summary with roll number range ──
+    const subjData={};
+    entries.forEach(e=>{
+      if(!subjData[e.subjId])subjData[e.subjId]={name:e.subjName,ci:e.ci,rolls:[],count:0};
+      subjData[e.subjId].rolls.push(e.roll);
+      subjData[e.subjId].count++;
+    });
+    body+=`<table border="1" style="border-collapse:collapse;margin-bottom:14px;font-size:10pt;width:100%;">
+      <thead><tr style="background:#003366;color:white;">
+        <th style="padding:5px 14px;text-align:left;">Subject</th>
+        <th style="padding:5px 14px;text-align:center;">No. of Students</th>
+        <th style="padding:5px 14px;text-align:left;">Roll Number Range</th>
+      </tr></thead><tbody>`;
+    Object.values(subjData).forEach(s=>{
+      const c=cc(s.ci);
+      body+=`<tr>
+        <td style="padding:6px 14px;"><span style="background:${c.bg};border:1px solid ${c.bd};color:${c.fg};padding:2px 9px;border-radius:8px;font-weight:bold;">${s.name}</span></td>
+        <td style="padding:6px 14px;text-align:center;font-weight:bold;font-size:12pt;">${s.count}</td>
+        <td style="padding:6px 14px;font-family:monospace;font-weight:bold;">${rollRanges(s.rolls)}</td>
+      </tr>`;
+    });
+    body+=`<tr style="background:#f5f8fc;font-weight:bold;">
+      <td style="padding:6px 14px;">Total</td>
+      <td style="padding:6px 14px;text-align:center;font-size:12pt;">${entries.length}</td>
+      <td style="padding:6px 14px;"></td>
+    </tr></tbody></table>`;
+
+    // ── Seating chart grid — gap after every 3 columns ──
+    body+=`<h3 style="color:#003366;margin-top:14px;">Seating Chart — ${hall.name}</h3>
+      <div style="text-align:center;margin-bottom:18px;">
+      <div style="background:#003366;color:white;font-weight:bold;padding:5px;letter-spacing:3px;border-radius:4px;margin-bottom:8px;max-width:600px;margin-left:auto;margin-right:auto;">◀ FRONT / BOARD ▶</div>
+      <table border="0" style="border-collapse:separate;border-spacing:0;margin:auto;">
+      <tr><td style="width:24px;"></td>`;
+    for(let c=0;c<hall.cols;c++){
+      if(c>0 && c%3===0) body+=`<td style="width:12px;"></td>`;
+      body+=`<td style="width:62px;text-align:center;font-weight:bold;color:#003366;font-size:9pt;padding-bottom:4px;">${c+1}</td>`;
+    }
+    body+='</tr>';
+    const blk=new Set(hall.blocked);
+    for(let r=0;r<hall.rows;r++){
+      body+=`<tr><td style="font-weight:bold;color:#003366;font-size:9pt;text-align:right;padding-right:4px;vertical-align:middle;">${String.fromCharCode(65+r)}</td>`;
+      for(let c=0;c<hall.cols;c++){
+        if(c>0 && c%3===0) body+=`<td style="width:12px;"></td>`;
+        const key=sk(r,c),entry=occ[key],isBlk=blk.has(key);
+        if(entry){const col=cc(entry.ci||0);
+          body+=`<td style="width:62px;height:70px;background:${col.bg};border:2px solid ${col.bd};text-align:center;vertical-align:middle;padding:2px;">
+            <span style="display:block;font-weight:bold;color:#003366;font-size:9pt;">${sl(r,c)}</span>
+            <span style="display:block;color:darkred;font-size:8pt;font-weight:bold;">${entry.roll}</span>
+            <span style="display:block;font-size:7.5pt;overflow:hidden;white-space:nowrap;max-width:60px;color:${col.fg};">${entry.name.split(' ')[0]}</span>
+            <span style="display:block;font-size:7pt;font-weight:bold;color:${col.fg};">${entry.subjName}</span></td>`;
+        }else if(isBlk){
+          body+=`<td style="width:62px;height:70px;background:#ddd;border:1px solid #aaa;text-align:center;color:#999;vertical-align:middle;">✕</td>`;
+        }else{
+          body+=`<td style="width:62px;height:70px;background:#e8f0fb;border:1px solid #7799bb;text-align:center;color:#bbb;font-size:9pt;vertical-align:middle;">${sl(r,c)}</td>`;
+        }
+      }
+      body+='</tr>';
+    }
+    body+='</table></div>';
+  });
+
+  if(!hasData)body='<div style="text-align:center;color:#888;padding:40px;font-size:11pt;">No assignments yet. Go to Setup → ⚡⚡ Assign ALL.</div>';
+  const hdr=`<div style="text-align:center;border-bottom:3px solid #003366;padding-bottom:10px;margin-bottom:16px;">
+    <h1 style="margin:0;color:#003366;font-size:18pt;">${examN} — Seating Arrangement</h1>
+    <p style="margin:4px 0 0;font-size:11pt;color:#555;">${instN}${instN&&dateS?' | ':''}${dateS?'Date: '+dateS:''}</p></div>`;
+  return hdr+body;
+}
+
+// ── SHOW PRINT PREVIEW (on screen) ───────────
+function showPrintPreview(){
+  const html=buildPrintHTML();
+  // Show in preview div on screen
+  document.getElementById('previewBody').innerHTML=html;
+  document.getElementById('previewWrap').style.display='';
+  document.getElementById('hideBtn').style.display='';
+  document.getElementById('expMsg').innerHTML='<div class="msg-ok">✓ Preview ready — press <b>Ctrl+P</b> (Windows) or <b>Cmd+P</b> (Mac) to print.</div>';
+  // Also populate the hidden printArea for @media print
+  document.getElementById('pBody').innerHTML=html;
+  document.getElementById('printArea').classList.add('show');
+}
+function hidePrintPreview(){
+  document.getElementById('previewWrap').style.display='none';
+  document.getElementById('hideBtn').style.display='none';
+  document.getElementById('expMsg').innerHTML='';
+  document.getElementById('printArea').classList.remove('show');
+}
+
+// ── CSV DOWNLOAD ──────────────────────────────
+function doCSV(){
+  const rows=[['S.No.','Roll No','Student Name','Subject','Hall','Seat']];
+  let i=1;
+  halls.forEach(hall=>{
+    Object.entries(assigns[hall.id]||{}).forEach(([key,val])=>{
+      const[r,c]=key.split('-').map(Number);
+      rows.push([i++,val.roll,val.name,val.subjName,hall.name,sl(r,c)]);
+    });
+  });
+  if(rows.length===1){
+    document.getElementById('expMsg').innerHTML='<div class="msg-err">No assignments to export yet.</div>';return;
+  }
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=(document.getElementById('examName').value||'exam').replace(/\s+/g,'_')+'_seating.csv';
+  document.body.appendChild(a);a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},500);
+  document.getElementById('expMsg').innerHTML='<div class="msg-ok">✓ CSV downloaded!</div>';
+}
+
+// ── STATS ─────────────────────────────────────
+function updateStats(){
+  const asgn=allAssigned().size;
+  document.getElementById('stStu').textContent=students.length;
+  document.getElementById('stSub').textContent=subjects.length;
+  document.getElementById('stHal').textContent=halls.length;
+  document.getElementById('stAss').textContent=asgn;
+  document.getElementById('stPen').textContent=students.length-asgn;
+  document.getElementById('stSea').textContent=halls.reduce((s,h)=>s+h.rows*h.cols-h.blocked.length,0);
+}
+
+// ── INIT ──────────────────────────────────────
+renderSubj();renderHalls();renderStu();renderLeg();renderPrev();updateStats();initSwatches();
+</script>
+</body>
+</html>
