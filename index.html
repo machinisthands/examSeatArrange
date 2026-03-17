@@ -144,8 +144,12 @@ body{font-family:Arial,sans-serif;font-size:12pt;background:#f0f4f8;color:navy;}
                 <input type="text" id="rollIn" class="form-control" placeholder="R001" onkeydown="if(event.key==='Enter')addStudent()"></div>
               <div class="col-5"><label class="form-label">Name</label>
                 <input type="text" id="nameIn" class="form-control" placeholder="Full Name" onkeydown="if(event.key==='Enter')addStudent()"></div>
-              <div class="col-4"><label class="form-label">Subject</label>
-                <select id="stuSubj" class="form-select"></select></div>
+              <div class="col-4"><label class="form-label">Subject <span style="font-size:9pt;color:#888;">(type or new)</span></label>
+                <input type="text" id="stuSubjTxt" class="form-control" placeholder="e.g. Mathematics"
+                  list="subjSuggestions" autocomplete="off"
+                  onkeydown="if(event.key==='Enter')addStudent()">
+                <datalist id="subjSuggestions"></datalist>
+              </div>
             </div>
             <div class="row g-2 mb-3">
               <div class="col-auto"><button class="btn btn-primary" onclick="addStudent()">+ Add</button></div>
@@ -158,9 +162,9 @@ body{font-family:Arial,sans-serif;font-size:12pt;background:#f0f4f8;color:navy;}
               <div style="font-weight:bold;color:#003366;margin-bottom:8px;">📋 Bulk CSV Import</div>
               <div class="info-box mb-2" style="font-size:10pt;">
                 <b>Format:</b> <code>Roll, Name, Subject</code> — one per line<br>
-                <b>e.g.</b> R001, Umesh Kumar, Mathematics
+                <b>e.g.</b> R001, Umesh Kumar, Mathematics<br>
+                <span style="color:#666;">Subject column (3rd) is required. New subjects are created automatically.</span>
               </div>
-              <!-- FILE INPUT — plain, no modal wrapper -->
               <div class="mb-2">
                 <label class="form-label mb-1">Upload CSV / TXT file:</label>
                 <input type="file" id="csvFile" accept=".csv,.txt,.tsv"
@@ -169,11 +173,7 @@ body{font-family:Arial,sans-serif;font-size:12pt;background:#f0f4f8;color:navy;}
               </div>
               <div class="text-center mb-2" style="color:#888;font-size:10pt;">— OR paste text below —</div>
               <textarea id="bulkTxt" class="form-control mb-2" rows="6"
-                placeholder="R001, Umesh Kumar, Mathematics&#10;R002, Priya Nair, Physics&#10;R003, Anand Sharma"></textarea>
-              <div class="row g-2 align-items-center mb-2">
-                <div class="col-auto"><label class="form-label mb-0">Default Subject:</label></div>
-                <div class="col-auto"><select id="bulkSubj" class="form-select form-select-sm" style="width:200px;"></select></div>
-              </div>
+                placeholder="R001, Umesh Kumar, Mathematics&#10;R002, Priya Nair, Physics&#10;R003, Anand Sharma, Chemistry"></textarea>
               <div id="bulkMsg" class="mb-2"></div>
               <div class="row g-2">
                 <div class="col-auto"><button class="btn btn-primary" onclick="doBulk()">✓ Import Students</button></div>
@@ -181,20 +181,25 @@ body{font-family:Arial,sans-serif;font-size:12pt;background:#f0f4f8;color:navy;}
               </div>
             </div>
 
-            <div style="max-height:250px;overflow-y:auto;">
-              <!-- Select all + bulk delete bar -->
-              <div class="row g-2 align-items-center mb-1">
-                <div class="col-auto">
-                  <input type="checkbox" id="selAll" title="Select all" onchange="toggleSelectAll(this.checked)"
-                    style="width:16px;height:16px;cursor:pointer;">
-                  <label for="selAll" style="font-size:10pt;color:#003366;font-weight:bold;margin-left:4px;cursor:pointer;">Select All</label>
-                </div>
-                <div class="col-auto">
-                  <button class="btn btn-danger btn-sm" onclick="deleteSelected()" id="delSelBtn" disabled>
-                    🗑 Delete Selected (<span id="selCount">0</span>)
-                  </button>
-                </div>
+            <!-- Filter + Select bar (outside scroll) -->
+            <div class="row g-2 align-items-center mb-1">
+              <div class="col-auto">
+                <input type="checkbox" id="selAll" title="Select all" onchange="toggleSelectAll(this.checked)"
+                  style="width:16px;height:16px;cursor:pointer;">
+                <label for="selAll" style="font-size:10pt;color:#003366;font-weight:bold;margin-left:4px;cursor:pointer;">Select All</label>
               </div>
+              <div class="col-auto">
+                <button class="btn btn-danger btn-sm" onclick="deleteSelected()" id="delSelBtn" disabled>
+                  🗑 Delete Selected (<span id="selCount">0</span>)
+                </button>
+              </div>
+              <div class="col-auto ms-auto">
+                <input type="text" id="stuFilter" class="form-control form-control-sm" style="width:160px;"
+                  placeholder="🔍 Filter by subject..." oninput="renderStu()">
+              </div>
+            </div>
+
+            <div style="max-height:250px;overflow-y:auto;">
               <table class="T1" border="1"><thead><tr><th style="width:32px;"></th><th>#</th><th>Roll</th><th>Name</th><th>Subject</th><th>Del</th></tr></thead>
               <tbody id="stuTb"></tbody></table>
             </div>
@@ -456,12 +461,9 @@ function renderSubj(){
     d.appendChild(inp);d.appendChild(info);d.appendChild(swDiv);d.appendChild(b);
     el.appendChild(d);
   });
-  ['stuSubj','bulkSubj'].forEach(id=>{
-    const sel=document.getElementById(id);if(!sel)return;
-    const cur=sel.value;
-    sel.innerHTML=subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
-    if(subjects.find(s=>String(s.id)===cur))sel.value=cur;
-  });
+  // sync subject suggestions datalist
+  const dl=document.getElementById('subjSuggestions');
+  if(dl) dl.innerHTML=subjects.map(s=>`<option value="${s.name}">`).join('');
   renderLeg();renderPrev();
 }
 
@@ -564,10 +566,24 @@ function addStudent(){
   const name=document.getElementById('nameIn').value.trim();
   if(!name){flash('Enter student name.','err');return;}
   const roll=document.getElementById('rollIn').value.trim()||`R${String(students.length+1).padStart(3,'0')}`;
-  const subjId=+document.getElementById('stuSubj').value;
-  students.push({id:roll+'_'+Date.now(),name,roll,subjId});
-  document.getElementById('nameIn').value='';document.getElementById('rollIn').value='';
-  renderStu();renderSubj();updateStats();
+
+  // Subject: find existing or auto-create new
+  const subjTxt=(document.getElementById('stuSubjTxt').value||'').trim();
+  if(!subjTxt){flash('Enter a subject name.','err');return;}
+  let subj=subjects.find(s=>s.name.toLowerCase()===subjTxt.toLowerCase());
+  if(!subj){
+    // auto-create new subject
+    const newCi=subjects.length%COLORS.length;
+    subj={id:sid++,name:subjTxt,ci:newCi};
+    subjects.push(subj);
+    flash(`✓ New subject "${subjTxt}" created.`,'ok');
+  }
+
+  students.push({id:roll+'_'+Date.now(),name,roll,subjId:subj.id});
+  document.getElementById('nameIn').value='';
+  document.getElementById('rollIn').value='';
+  // keep subject field for fast repeated entry of same subject
+  renderStu();renderSubj();updateStats();initSwatches();
 }
 function delStudent(id){
   students=students.filter(s=>s.id!==id);
@@ -581,31 +597,62 @@ function clearStudents(){
 }
 function renderStu(){
   const tb=document.getElementById('stuTb');tb.innerHTML='';
-  if(!students.length){
-    tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#888;font-size:10pt;">No students yet.</td></tr>';
+  const filterEl=document.getElementById('stuFilter');
+  const filterTxt=(filterEl?filterEl.value:'').trim().toLowerCase();
+  const list=filterTxt
+    ? students.filter(s=>{
+        const sub=subjects.find(x=>x.id===s.subjId);
+        return sub && sub.name.toLowerCase().includes(filterTxt);
+      })
+    : students;
+  if(!list.length){
+    tb.innerHTML=`<tr><td colspan="6" style="text-align:center;color:#888;font-size:10pt;">${filterTxt?`No students matching "${filterTxt}".`:'No students yet.'}</td></tr>`;
     updateSelCount();return;
   }
-  students.forEach((s,i)=>{
+  list.forEach((s,i)=>{
     const sub=subjects.find(x=>x.id===s.subjId);
     const c=sub?cc(sub.ci):{bg:'white',bd:'#aaa',fg:'#333'};
     const tr=document.createElement('tr');
-    // checkbox cell
-    const tdCk=document.createElement('td');tdCk.style.textAlign='center';
+
+    // 1. Checkbox cell — create fully in JS, never use innerHTML on this row
+    const tdCk=document.createElement('td');
+    tdCk.style.textAlign='center';
     const ck=document.createElement('input');
     ck.type='checkbox'; ck.dataset.id=s.id;
     ck.style.cssText='width:15px;height:15px;cursor:pointer;';
     ck.onchange=updateSelCount;
-    tdCk.appendChild(ck);tr.appendChild(tdCk);
-    tr.innerHTML+=`<td>${i+1}</td>
-      <td style="font-family:monospace;">${s.roll}</td>
-      <td>${s.name}</td>
-      <td><span class="spill" style="background:${c.bg};border-color:${c.bd};color:${c.fg};">${sub?sub.name:'—'}</span></td>`;
-    const td=document.createElement('td');
+    tdCk.appendChild(ck);
+    tr.appendChild(tdCk);
+
+    // 2. Serial number — position in filtered list
+    const tdNo=document.createElement('td');
+    tdNo.textContent=i+1;
+    tr.appendChild(tdNo);
+
+    // 3. Roll
+    const tdRoll=document.createElement('td');
+    tdRoll.style.fontFamily='monospace';
+    tdRoll.textContent=s.roll;
+    tr.appendChild(tdRoll);
+
+    // 4. Name
+    const tdName=document.createElement('td');
+    tdName.textContent=s.name;
+    tr.appendChild(tdName);
+
+    // 5. Subject
+    const tdSubj=document.createElement('td');
+    tdSubj.innerHTML=`<span class="spill" style="background:${c.bg};border-color:${c.bd};color:${c.fg};">${sub?sub.name:'—'}</span>`;
+    tr.appendChild(tdSubj);
+
+    // 6. Delete button
+    const tdDel=document.createElement('td');
     const b=document.createElement('button');
     b.className='btn btn-danger btn-sm py-0';b.textContent='✕';b.onclick=()=>delStudent(s.id);
-    td.appendChild(b);tr.appendChild(td);tb.appendChild(tr);
-    // re-attach checkbox (innerHTML wipes it)
-    tr.cells[0].appendChild(ck);
+    tdDel.appendChild(b);
+    tr.appendChild(tdDel);
+
+    tb.appendChild(tr);
   });
   updateSelCount();
 }
@@ -644,7 +691,6 @@ function toggleBulk(){
   const open=sec.style.display!=='none';
   sec.style.display=open?'none':'';
   if(!open){
-    document.getElementById('bulkSubj').innerHTML=subjects.map(s=>`<option value="${s.id}">${s.name}</option>`).join('');
     document.getElementById('bulkMsg').innerHTML='';
     document.getElementById('bulkTxt').value='';
   }
@@ -667,22 +713,29 @@ function doBulk(){
   if(!text){
     document.getElementById('bulkMsg').innerHTML='<div class="msg-err">Please paste data or upload a file.</div>';return;
   }
-  const defId=+document.getElementById('bulkSubj').value;
-  let n=0,skip=0;
+  let n=0,skip=0,newSubjects=[];
   text.split('\n').forEach(line=>{
     line=line.trim();if(!line)return;
     const p=line.includes('\t')?line.split('\t').map(x=>x.trim()):line.split(',').map(x=>x.trim());
-    const roll=p[0]||'',name=p[1]||'';
+    const roll=p[0]||'',name=p[1]||'',subjTxt=p[2]||'';
     if(!name){skip++;return;}
-    let subjId=defId;
-    if(p[2]){const v=p[2].toLowerCase();const m=subjects.find(s=>s.name.toLowerCase().includes(v)||v.includes(s.name.toLowerCase()));if(m)subjId=m.id;}
-    students.push({id:(roll||'S')+'_'+Date.now()+'_'+n,name,roll:roll||`R${String(students.length+1).padStart(3,'0')}`,subjId});n++;
+    if(!subjTxt){skip++;return;} // 3rd column required
+    // find or auto-create subject
+    let subj=subjects.find(s=>s.name.toLowerCase()===subjTxt.toLowerCase());
+    if(!subj){
+      subj={id:sid++,name:subjTxt,ci:subjects.length%COLORS.length};
+      subjects.push(subj);
+      newSubjects.push(subjTxt);
+    }
+    students.push({id:(roll||'S')+'_'+Date.now()+'_'+n,name,roll:roll||`R${String(students.length+1).padStart(3,'0')}`,subjId:subj.id});
+    n++;
   });
   document.getElementById('bulkTxt').value='';
   const fi=document.getElementById('csvFile');if(fi)fi.value='';
-  renderStu();renderSubj();updateStats();
-  document.getElementById('bulkMsg').innerHTML=`<div class="msg-ok">✓ ${n} student(s) imported${skip?' · '+skip+' skipped':''}.</div>`;
-  if(n>0)setTimeout(()=>{document.getElementById('bulkSec').style.display='none';},1800);
+  renderStu();renderSubj();updateStats();initSwatches();
+  const newMsg=newSubjects.length?` · ${newSubjects.length} new subject(s) created: ${newSubjects.join(', ')}` :'';
+  document.getElementById('bulkMsg').innerHTML=`<div class="msg-ok">✓ ${n} student(s) imported${skip?' · '+skip+' skipped (missing name/subject)':''}${newMsg}.</div>`;
+  if(n>0)setTimeout(()=>{document.getElementById('bulkSec').style.display='none';},2200);
 }
 
 // ── PATTERN ───────────────────────────────────
@@ -792,6 +845,9 @@ function resetAll(){assigns={};renderGrid();renderAss();updateStats();}
 function removeAssign(hallId,key){if(assigns[hallId])delete assigns[hallId][key];renderAss();renderGrid();updateStats();}
 
 // ── GRID ──────────────────────────────────────
+// drag state
+let dragStudentId=null;
+
 function renderGrid(){
   const h=halls.find(x=>x.id===activeHall);if(!h)return;
   document.getElementById('aR').value=h.rows;
@@ -800,28 +856,158 @@ function renderGrid(){
   const used=Object.keys(occ).length,cap=h.rows*h.cols-h.blocked.length;
   document.getElementById('brdLbl').textContent=`◀  FRONT / BOARD — ${h.name}  ▶`;
   document.getElementById('capInfo').innerHTML=`<b>Total:</b> ${h.rows*h.cols} | <b>Blocked:</b> ${h.blocked.length} | <b>Free:</b> ${cap-used} | <b>Assigned:</b> <span style="color:green;">${used}</span>`;
+
   const tbl=document.createElement('table');tbl.className='sgrid';tbl.border=1;
-  const hr=tbl.insertRow();const th0=hr.insertCell();th0.className='lbl';th0.style.border='none';
+  const hr=tbl.insertRow();
+  const th0=hr.insertCell();th0.className='lbl';th0.style.border='none';
   for(let c=0;c<h.cols;c++){const th=hr.insertCell();th.className='lbl';th.textContent=c+1;}
+
   for(let r=0;r<h.rows;r++){
     const row=tbl.insertRow();
     const rl=row.insertCell();rl.className='lbl';rl.textContent=String.fromCharCode(65+r);
     for(let c=0;c<h.cols;c++){
       const key=sk(r,c),entry=occ[key],isBlk=blk.has(key);
       const td=row.insertCell();
-      if(entry){const col=cc(entry.ci||0);td.className='occ';td.style.background=col.bg;td.style.borderColor=col.bd;
-        td.title=`${entry.roll} — ${entry.name}`;
-        td.innerHTML=`<span class="sn">${sl(r,c)}</span><span class="sr" style="color:${col.fg};">${entry.roll}</span><span class="sm" style="color:${col.fg};">${entry.name.split(' ')[0]}</span><span class="ss" style="color:${col.fg};">${entry.subjName}</span>`;
-      }else if(isBlk){td.className='blk';td.innerHTML='<span style="font-size:13pt;color:#bbb;">✕</span>';td.onclick=()=>toggleBlock(r,c);}
-      else{td.innerHTML=`<span class="sn">${sl(r,c)}</span>`;td.onclick=()=>toggleBlock(r,c);}
+
+      if(entry){
+        // OCCUPIED — click to remove
+        const col=cc(entry.ci||0);
+        td.className='occ';
+        td.style.background=col.bg;
+        td.style.borderColor=col.bd;
+        td.title=`${entry.roll} — ${entry.name} (${entry.subjName})\nClick to remove`;
+        td.style.cursor='pointer';
+        td.innerHTML=`<span class="sn">${sl(r,c)}</span>
+          <span class="sr" style="color:${col.fg};">${entry.roll}</span>
+          <span class="sm" style="color:${col.fg};">${entry.name.split(' ')[0]}</span>
+          <span class="ss" style="color:${col.fg};">${entry.subjName}</span>`;
+        td.onclick=()=>{
+          delete assigns[h.id][key];
+          if(!Object.keys(assigns[h.id]).length) delete assigns[h.id];
+          renderGrid();renderAss();updateStats();
+        };
+
+      } else if(isBlk){
+        td.className='blk';
+        td.innerHTML='<span style="font-size:13pt;color:#bbb;">✕</span>';
+        td.title='Blocked — click to unblock';
+        td.onclick=()=>toggleBlock(r,c);
+
+      } else {
+        // EMPTY — drag-drop target OR click to type roll number
+        td.style.cursor='pointer';
+        td.title='Drop student here, or click to type roll number';
+        td.innerHTML=`<span class="sn" style="color:#aab;">${sl(r,c)}</span>`;
+
+        // drag-drop: accept drop
+        td.ondragover=e=>{e.preventDefault();td.style.background='#b8d0f0';};
+        td.ondragleave=()=>td.style.background='';
+        td.ondrop=e=>{
+          e.preventDefault();td.style.background='';
+          const sid=dragStudentId||e.dataTransfer.getData('text');
+          if(!sid)return;
+          assignStudentToSeat(h,key,sid);
+        };
+
+        // click to type roll number
+        td.onclick=()=>promptRollForSeat(h,key,sl(r,c));
+      }
     }
   }
+
   const w=document.getElementById('gridWrap');w.innerHTML='';w.appendChild(tbl);
+
+  // rebuild draggable student list panel
+  renderDragList();
+
   let leg='<b style="font-size:10pt;">Legend: </b>';
   leg+=`<span style="display:inline-block;width:14px;height:14px;background:#e8f0fb;border:1px solid #7799bb;vertical-align:middle;margin:0 4px;border-radius:2px;"></span>Available `;
   subjects.forEach(s=>{const c=cc(s.ci);leg+=`<span style="display:inline-block;width:14px;height:14px;background:${c.bg};border:1px solid ${c.bd};vertical-align:middle;margin:0 4px;border-radius:2px;"></span>${s.name} `;});
   leg+=`<span style="display:inline-block;width:14px;height:14px;background:#ddd;border:1px solid #999;vertical-align:middle;margin:0 4px;border-radius:2px;"></span>Blocked`;
   document.getElementById('gridLeg').innerHTML=leg;
+}
+
+// assign a student by studentId to a seat key
+function assignStudentToSeat(hall,key,studentId){
+  const s=students.find(x=>x.id===studentId);if(!s)return;
+  const sub=subjects.find(x=>x.id===s.subjId);
+  if(!assigns[hall.id])assigns[hall.id]={};
+  assigns[hall.id][key]={studentId:s.id,name:s.name,roll:s.roll,subjId:s.subjId,subjName:sub?sub.name:'',ci:sub?sub.ci:0};
+  renderGrid();renderAss();updateStats();
+}
+
+// click empty seat → small inline input to type roll number
+function promptRollForSeat(hall,key,seatLbl){
+  const w=document.getElementById('gridWrap');
+  // find the cell by seat label — re-query after render
+  const cells=[...w.querySelectorAll('td')];
+  const td=cells.find(t=>t.querySelector('.sn')?.textContent===seatLbl&&!t.classList.contains('occ')&&!t.classList.contains('blk')&&!t.classList.contains('lbl'));
+  if(!td)return;
+  td.innerHTML='';
+  const inp=document.createElement('input');
+  inp.type='text';
+  inp.placeholder='Roll No';
+  inp.style.cssText='width:56px;border:1px solid #003366;border-radius:3px;padding:2px 3px;font-size:8pt;text-align:center;';
+  inp.autofocus=true;
+  td.appendChild(inp);
+  inp.focus();
+  const commit=()=>{
+    const roll=inp.value.trim();
+    if(roll){
+      const s=students.find(x=>x.roll.toLowerCase()===roll.toLowerCase());
+      if(s){ assignStudentToSeat(hall,key,s.id); return; }
+      else { td.style.outline='2px solid red'; }
+    }
+    renderGrid(); // cancel
+  };
+  inp.onblur=commit;
+  inp.onkeydown=e=>{
+    if(e.key==='Enter')commit();
+    if(e.key==='Escape')renderGrid();
+    e.stopPropagation();
+  };
+}
+
+// draggable student list shown beside grid
+function renderDragList(){
+  let panel=document.getElementById('dragPanel');
+  if(!panel){
+    panel=document.createElement('div');
+    panel.id='dragPanel';
+    panel.style.cssText='margin-top:12px;padding:10px;background:#f5f8fc;border:1px solid #aac;border-radius:6px;';
+    document.getElementById('gridWrap').after(panel);
+  }
+  const assigned=allAssigned();
+  const unassigned=students.filter(s=>!assigned.has(s.id));
+  panel.innerHTML=`<div style="font-weight:bold;color:#003366;font-size:10pt;margin-bottom:6px;">
+    Drag students onto seats &nbsp;|&nbsp; or click a seat to type roll number
+    &nbsp;<span style="color:#555;font-weight:normal;">(${unassigned.length} unassigned)</span>
+  </div>`;
+  if(!unassigned.length){
+    panel.innerHTML+='<span style="color:#888;font-size:10pt;">All students assigned.</span>';return;
+  }
+  const wrap=document.createElement('div');
+  wrap.style.cssText='display:flex;flex-wrap:wrap;gap:5px;';
+  unassigned.forEach(s=>{
+    const sub=subjects.find(x=>x.id===s.subjId);
+    const c=sub?cc(sub.ci):{bg:'#eee',bd:'#aaa',fg:'#333'};
+    const chip=document.createElement('div');
+    chip.draggable=true;
+    chip.dataset.id=s.id;
+    chip.style.cssText=`display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:4px;
+      background:${c.bg};border:1px solid ${c.bd};color:${c.fg};font-size:9.5pt;
+      cursor:grab;user-select:none;font-weight:bold;`;
+    chip.title=`${s.roll} — ${s.name} (${sub?sub.name:'?'})`;
+    chip.innerHTML=`<span style="font-family:monospace;">${s.roll}</span> ${s.name.split(' ')[0]}`;
+    chip.ondragstart=e=>{
+      dragStudentId=s.id;
+      e.dataTransfer.setData('text',s.id);
+      chip.style.opacity='.4';
+    };
+    chip.ondragend=()=>{dragStudentId=null;chip.style.opacity='1';};
+    wrap.appendChild(chip);
+  });
+  panel.appendChild(wrap);
 }
 function toggleBlock(r,c){
   const h=halls.find(x=>x.id===activeHall);if(!h)return;
@@ -882,10 +1068,42 @@ function buildPrintHTML(){
 
   // Helper: compute roll number ranges e.g. R001–R015
   function rollRanges(rolls){
-    // Just show first and last roll of each group
     if(!rolls.length)return'';
     if(rolls.length===1)return rolls[0];
-    return rolls[0]+' – '+rolls[rolls.length-1];
+
+    // Extract numeric suffix and prefix from roll number
+    // e.g. TKM24ME001 → prefix='TKM24ME', num=1
+    function parse(r){
+      const m=r.match(/^(.*?)(\d+)$/);
+      if(!m)return{prefix:r,num:NaN,orig:r};
+      return{prefix:m[1],num:parseInt(m[2],10),digits:m[2].length,orig:r};
+    }
+
+    // Sort rolls by numeric value
+    const parsed=rolls.map(parse).sort((a,b)=>{
+      if(a.prefix!==b.prefix)return a.prefix.localeCompare(b.prefix);
+      return a.num-b.num;
+    });
+
+    const groups=[];
+    let start=parsed[0],end=parsed[0];
+
+    for(let i=1;i<parsed.length;i++){
+      const cur=parsed[i],prev=parsed[i-1];
+      // consecutive if same prefix and num increases by 1
+      if(cur.prefix===prev.prefix && !isNaN(cur.num) && cur.num===prev.num+1){
+        end=cur;
+      } else {
+        groups.push({start,end});
+        start=cur;end=cur;
+      }
+    }
+    groups.push({start,end});
+
+    return groups.map(g=>{
+      if(g.start.orig===g.end.orig) return g.start.orig;
+      return g.start.orig+'–'+g.end.orig;
+    }).join(', ');
   }
 
   // ── ALL HALLS SUMMARY — one page ──
@@ -941,35 +1159,8 @@ function buildPrintHTML(){
     // ── Hall heading ──
     body+=`<h2 style="color:#003366;border-bottom:2px solid #003366;margin-top:18px;padding-bottom:4px;">${hall.name}</h2>`;
 
-    // ── Per-hall subject summary with roll number range ──
-    const subjData={};
-    entries.forEach(e=>{
-      if(!subjData[e.subjId])subjData[e.subjId]={name:e.subjName,ci:e.ci,rolls:[],count:0};
-      subjData[e.subjId].rolls.push(e.roll);
-      subjData[e.subjId].count++;
-    });
-    body+=`<table border="1" style="border-collapse:collapse;margin-bottom:14px;font-size:10pt;width:100%;">
-      <thead><tr style="background:#003366;color:white;">
-        <th style="padding:5px 14px;text-align:left;">Subject</th>
-        <th style="padding:5px 14px;text-align:center;">No. of Students</th>
-        <th style="padding:5px 14px;text-align:left;">Roll Number Range</th>
-      </tr></thead><tbody>`;
-    Object.values(subjData).forEach(s=>{
-      const c=cc(s.ci);
-      body+=`<tr>
-        <td style="padding:6px 14px;"><span style="background:${c.bg};border:1px solid ${c.bd};color:${c.fg};padding:2px 9px;border-radius:8px;font-weight:bold;">${s.name}</span></td>
-        <td style="padding:6px 14px;text-align:center;font-weight:bold;font-size:12pt;">${s.count}</td>
-        <td style="padding:6px 14px;font-family:monospace;font-weight:bold;">${rollRanges(s.rolls)}</td>
-      </tr>`;
-    });
-    body+=`<tr style="background:#f5f8fc;font-weight:bold;">
-      <td style="padding:6px 14px;">Total</td>
-      <td style="padding:6px 14px;text-align:center;font-size:12pt;">${entries.length}</td>
-      <td style="padding:6px 14px;"></td>
-    </tr></tbody></table>`;
-
     // ── Seating chart grid — gap after every 3 columns ──
-    body+=`<h3 style="color:#003366;margin-top:14px;">Seating Chart — ${hall.name}</h3>
+    body+=`<h3 style="color:#003366;margin-top:14px;">Seating Chart</h3>
       <div style="text-align:center;margin-bottom:18px;">
       <div style="background:#003366;color:white;font-weight:bold;padding:5px;letter-spacing:3px;border-radius:4px;margin-bottom:8px;max-width:600px;margin-left:auto;margin-right:auto;">◀ FRONT / BOARD ▶</div>
       <table border="0" style="border-collapse:separate;border-spacing:0;margin:auto;">
