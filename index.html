@@ -343,6 +343,7 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
         </div>
         <div class="row g-2">
           <div class="col-auto"><button class="btn btn-primary" onclick="showPrintPreview()">🖨 Show Print Preview</button></div>
+          <div class="col-auto"><button class="btn btn-warning" onclick="doPrint()">🖨 Print Now</button></div>
           <div class="col-auto"><button class="btn btn-secondary" onclick="hidePrintPreview()" id="hideBtn" style="display:none;">✕ Hide Preview</button></div>
           <div class="col-auto"><button class="btn btn-success" onclick="doCSV()">⬇ Download CSV</button></div>
         </div>
@@ -1249,6 +1250,15 @@ function hidePrintPreview(){
   document.getElementById('hideBtn').style.display='none';
   document.getElementById('expMsg').innerHTML='';
   document.getElementById('printArea').classList.remove('show');
+}
+
+// ── PRINT NOW ────────────────────────────────
+function doPrint(){
+  const html=buildPrintHTML();
+  document.getElementById('pBody').innerHTML=html;
+  document.getElementById('printArea').classList.add('show');
+  window.print();
+  setTimeout(()=>document.getElementById('printArea').classList.remove('show'),1000);
 }
 
 // ── CSV DOWNLOAD ──────────────────────────────
