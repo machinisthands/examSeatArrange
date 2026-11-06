@@ -132,6 +132,7 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
     <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('hall');return false;">2. Hall Layout</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('assign');return false;">3. Assignments</a></li>
     <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('export');return false;">4. Export / Print</a></li>
+    <li class="nav-item"><a class="nav-link" href="#" onclick="showTab('absent');return false;">5. Absentees</a></li>
   </ul>
 
   <!-- ══ TAB 1: SETUP ══ -->
@@ -195,11 +196,11 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
               <div class="info-box mb-2" style="font-size:10pt;">
                 <b>Format:</b> <code>Roll, Name, Subject</code> — one per line<br>
                 <b>e.g.</b> R001, Umesh Kumar, Mathematics<br>
-                <span style="color:#666;">Subject column (3rd) is required. New subjects are created automatically.</span>
+                <span style="color:#666;">Subject column (3rd) is required. New subjects are created automatically. Excel files: first sheet (or "Seating" sheet) is read; a header row with Roll / Name / Subject is detected automatically.</span>
               </div>
               <div class="mb-2">
-                <label class="form-label mb-1">Upload CSV / TXT file:</label>
-                <input type="file" id="csvFile" accept=".csv,.txt,.tsv"
+                <label class="form-label mb-1">Upload Excel (.xlsx) / CSV / TXT file:</label>
+                <input type="file" id="csvFile" accept=".csv,.txt,.tsv,.xlsx,.xls"
                   style="display:block;width:100%;padding:5px;border:1px solid #7799bb;border-radius:4px;background:white;cursor:pointer;"
                   onchange="onFileChange(this)">
               </div>
@@ -263,14 +264,20 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
               <tbody>
                 <tr style="background:#fff8e1;"><td><b>Column Order</b></td><td><b>A1-E1 same subject, A2-E2 next, A3-E3 next…</b> ✓ Recommended</td><td><input type="radio" name="pat" value="colorder" checked onchange="renderPrev()"></td></tr>
                 <tr><td><b>Subject Order</b></td><td>All of subject A first, then B, then C…</td><td><input type="radio" name="pat" value="subjorder" onchange="renderPrev()"></td></tr>
-                <tr><td><b>ABAB</b></td><td>Alternate every seat</td><td><input type="radio" name="pat" value="ABAB" onchange="renderPrev()"></td></tr>
+                <tr><td><b>ABAB</b></td><td>Alternate</td><td><input type="radio" name="pat" value="ABAB" onchange="renderPrev()"></td></tr>
                 <tr><td><b>AABB</b></td><td>Two together</td><td><input type="radio" name="pat" value="AABB" onchange="renderPrev()"></td></tr>
                 <tr><td><b>ABBA</b></td><td>Mirror</td><td><input type="radio" name="pat" value="ABBA" onchange="renderPrev()"></td></tr>
-                <tr><td><b>ABCABC</b></td><td>Three subjects cycling by seat</td><td><input type="radio" name="pat" value="ABCABC" onchange="renderPrev()"></td></tr>
+                <tr><td><b>ABCABC</b></td><td>Three subjects cycling</td><td><input type="radio" name="pat" value="ABCABC" onchange="renderPrev()"></td></tr>
                 <tr><td><b>Custom</b></td><td><input type="text" id="custPat" class="form-control form-control-sm" placeholder="e.g. AABBC" style="width:110px;display:inline;" oninput="renderPrev()"></td>
                     <td><input type="radio" name="pat" value="custom" onchange="renderPrev()"></td></tr>
               </tbody>
             </table>
+            <div class="mb-2" style="font-size:10.5pt;">
+              <b style="color:var(--accent);">Apply ABAB / AABB / ABBA / ABCABC / Custom by:</b><br>
+              <label style="cursor:pointer;"><input type="radio" name="pdir" value="col" checked onchange="renderPrev()"> <b>Across</b> — columns 1,2,3… = A,B,C…; every row repeats A B C A B C ✓ Recommended</label><br>
+              <label style="cursor:pointer;"><input type="radio" name="pdir" value="row" onchange="renderPrev()"> <b>Down</b> — whole row = one subject (row A = A, row B = B…)</label><br>
+              <label style="cursor:pointer;"><input type="radio" name="pdir" value="seat" onchange="renderPrev()"> Seat-by-seat (down each column)</label>
+            </div>
             <div id="patLeg" class="mb-2"></div>
             <div class="info-box mb-2"><b>Preview:</b><br><div id="patPrev" style="margin-top:5px;"></div></div>
             <div class="row g-2">
@@ -346,8 +353,26 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
           <div class="col-auto"><button class="btn btn-warning" onclick="doPrint()">🖨 Print Now</button></div>
           <div class="col-auto"><button class="btn btn-secondary" onclick="hidePrintPreview()" id="hideBtn" style="display:none;">✕ Hide Preview</button></div>
           <div class="col-auto"><button class="btn btn-success" onclick="doCSV()">⬇ Download CSV</button></div>
+          <div class="col-auto"><button class="btn btn-success" onclick="doExcel()">⬇ Download Excel (.xlsx)</button></div>
+          <div class="col-auto"><button class="btn btn-danger pdfbtn" onclick="doPDF()">📄 Download PDF</button></div>
+          <div class="col-auto"><button class="btn btn-warning pdfbtn" onclick="doNoticePDF()">📌 Notice Board Sheet (PDF)</button></div>
         </div>
         <div id="expMsg" class="mt-2"></div>
+      </div>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-header">📥 Import Excel / CSV (restore a saved arrangement)</div>
+      <div class="card-body">
+        <div class="info-box mb-2" style="font-size:10pt;">
+          Upload a file exported from this system (<b>.xlsx</b> or <b>.csv</b>).
+          Columns: <code>S.No., Roll No, Student Name, Subject, Hall, Seat</code>.<br>
+          The <b>.xlsx</b> file also restores hall sizes, blocked seats, subject colours and exam info.
+          Rows with no Hall/Seat are imported as <i>Pending</i> students.
+          <b>Importing replaces the current data.</b>
+        </div>
+        <input type="file" id="seatFile" accept=".xlsx,.xls,.csv,.txt,.tsv" class="form-control" onchange="onSeatFile(this)">
+        <div id="impMsg" class="mt-2"></div>
       </div>
     </div>
 
@@ -357,10 +382,34 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
     </div>
   </div>
 
+
+  <!-- ══ TAB 5: ABSENTEES ══ -->
+  <div id="tab-absent" style="display:none;">
+    <div class="sec">📝 Absentees</div>
+    <div class="info-box mb-2" style="font-size:10pt;">
+      <b>Sheet 1:</b> print the blank <b>Absentee Entry Sheet</b> for invigilators to write absent roll numbers by hand.<br>
+      <b>Sheet 2:</b> type the absent roll numbers below (comma separated, ranges allowed, e.g. <code>3, 7-9, 21</code>) — totals and the remaining students' numbers update automatically — then download the <b>Attendance Report</b>.
+    </div>
+    <div class="row g-2 mb-2">
+      <div class="col-auto"><button class="btn btn-warning pdfbtn" onclick="doBlankAbsentPDF()">🖨 Sheet 1: Blank Absentee Entry Sheet (PDF)</button></div>
+      <div class="col-auto"><button class="btn btn-danger pdfbtn" onclick="doAttendancePDF()">📄 Sheet 2: Attendance Report (PDF)</button></div>
+      <div class="col-auto"><button class="btn btn-secondary" onclick="clearAbsent()">↩ Clear all absentees</button></div>
+    </div>
+    <div id="absMsg" class="mb-2"></div>
+    <div style="overflow-x:auto;">
+      <table class="T1" border="1">
+        <thead><tr><th>Hall</th><th>Subject</th><th>Roll Numbers</th><th style="min-width:220px;">Absentees</th><th>Total Absent</th><th>Present Roll Numbers</th></tr></thead>
+        <tbody id="absTb"></tbody>
+      </table>
+    </div>
+  </div>
+
 </div><!-- /container -->
 </div><!-- /mainContent -->
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 // ── DATA ──────────────────────────────────────
 const COLORS=[
@@ -385,14 +434,15 @@ let sid=3,hid=3,activeHall=1;
 
 // ── TABS ──────────────────────────────────────
 function showTab(t){
-  ['setup','hall','assign','export'].forEach(x=>{
+  ['setup','hall','assign','export','absent'].forEach(x=>{
     document.getElementById('tab-'+x).style.display=x===t?'':'none';
   });
   document.querySelectorAll('#mainTabs .nav-link').forEach((a,i)=>{
-    a.classList.toggle('active',['setup','hall','assign','export'][i]===t);
+    a.classList.toggle('active',['setup','hall','assign','export','absent'][i]===t);
   });
   if(t==='hall'){buildHTabs('hallTabs1');renderGrid();}
   if(t==='assign'){buildHTabs('hallTabs2');renderAss();}
+  if(t==='absent'){renderAbsent();}
   updateStats();
 }
 
@@ -729,17 +779,43 @@ function toggleBulk(){
   }
 }
 function onFileChange(input){
-  // FileReader works fine in real browsers — this is standard HTML5 API
   const file=input.files[0];if(!file)return;
+  const msgEl=document.getElementById('bulkMsg');
+  const isExcel=/\.(xlsx|xls|xlsm)$/i.test(file.name);
   const reader=new FileReader();
   reader.onload=e=>{
-    document.getElementById('bulkTxt').value=e.target.result;
-    document.getElementById('bulkMsg').innerHTML='<div class="msg-ok">✓ File loaded — click Import Students.</div>';
+    try{
+      let text;
+      if(isExcel){
+        if(typeof XLSX==='undefined')throw new Error('Excel library not loaded (check internet connection)');
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        const k=wb.SheetNames.find(x=>x.trim().toLowerCase()==='seating')||wb.SheetNames[0];
+        const rows=XLSX.utils.sheet_to_json(wb.Sheets[k],{header:1,defval:'',raw:false,blankrows:false})
+          .map(r=>r.map(v=>String(v).trim()));
+        // find header row (Roll / Name / Subject); otherwise assume columns = Roll, Name, Subject
+        const hi=rows.findIndex(r=>r.some(v=>/roll/i.test(v))&&r.some(v=>/name/i.test(v)));
+        let ci={roll:0,name:1,subj:2};
+        if(hi>=0){
+          const h=rows[hi].map(v=>v.toLowerCase());
+          const f=re=>h.findIndex(v=>re.test(v));
+          ci={roll:f(/roll/),name:f(/name/),subj:f(/subject/)};
+          if(ci.name<0||ci.subj<0)throw new Error('Could not find "Name" and "Subject" columns');
+        }
+        text=rows.slice(hi+1).filter(r=>r.some(v=>v))
+          .map(r=>[ci.roll>=0?(r[ci.roll]||''):'',r[ci.name]||'',r[ci.subj]||''].join('\t')).join('\n');
+      } else {
+        text=e.target.result;
+      }
+      document.getElementById('bulkTxt').value=text;
+      msgEl.innerHTML='<div class="msg-ok">✓ File loaded — click Import Students.</div>';
+    }catch(err){
+      msgEl.innerHTML='<div class="msg-err">✗ Could not read file: '+(err.message||err)+'</div>';
+    }
   };
   reader.onerror=()=>{
-    document.getElementById('bulkMsg').innerHTML='<div class="msg-err">✗ Could not read file. Try pasting the text instead.</div>';
+    msgEl.innerHTML='<div class="msg-err">✗ Could not read file. Try pasting the text instead.</div>';
   };
-  reader.readAsText(file);
+  if(isExcel)reader.readAsArrayBuffer(file);else reader.readAsText(file);
 }
 function doBulk(){
   const text=document.getElementById('bulkTxt').value.trim();
@@ -775,9 +851,10 @@ function doBulk(){
 function getPat(){
   const r=document.querySelector('input[name="pat"]:checked');
   if(!r)return'colorder';
-  if(r.value==='custom')return(document.getElementById('custPat').value||'ABAB').toUpperCase().replace(/[^A-Z]/g,'');
+  if(r.value==='custom')return((document.getElementById('custPat').value||'').toUpperCase().replace(/[^A-Z]/g,''))||'ABAB';
   return r.value;
 }
+function getDir(){const r=document.querySelector('input[name="pdir"]:checked');return r?r.value:'col';}
 function renderLeg(){
   document.getElementById('patLeg').innerHTML=subjects.map((s,i)=>{const c=cc(s.ci);
     return`<span class="spill me-1" style="background:${c.bg};border-color:${c.bd};color:${c.fg};"><b>${String.fromCharCode(65+i)}</b>=${s.name}</span>`;
@@ -798,7 +875,7 @@ function renderPrev(){
       }
       html+=`<div style="text-align:center;font-size:8pt;color:#555;margin-top:2px;">${c+1}</div></div>`;
     }
-    html+='</div>';
+    html+='</div><div style="font-size:9pt;margin-top:6px;color:#8892a4;">Column 1 = subject A, column 2 = B … (A1-E1 same subject). When a subject finishes, the next unseated subject takes its column — any number of subjects.</div>';
     el.innerHTML=html;return;
   }
   if(pat==='subjorder'){
@@ -809,55 +886,150 @@ function renderPrev(){
     }).slice(0,12).join('');
     return;
   }
-  el.innerHTML=Array.from({length:12},(_,i)=>{
-    const ch=pat[i%pat.length]||'A',idx=ch.charCodeAt(0)-65;
-    const s=subjects[idx%subjects.length],c=s?cc(s.ci):{bg:'#eee',bd:'#999',fg:'#333'};
-    return`<span style="display:inline-block;width:26px;height:26px;line-height:26px;text-align:center;background:${c.bg};border:1px solid ${c.bd};color:${c.fg};border-radius:3px;font-size:9pt;font-weight:bold;margin:2px;">${ch}</span>`;
-  }).join('');
+  // pattern preview: seats fill DOWN each column (5 rows shown), then the next column
+  const pt=pat||'AB';
+  const letters=[...new Set(pt.split('').map(ch=>ch.charCodeAt(0)-65))].sort((x,y)=>x-y);
+  if(getDir()==='col'){
+    let h='<div style="display:flex;gap:2px;margin-bottom:2px;"><span style="width:16px;"></span>';
+    for(let c=0;c<9;c++)h+=`<span style="display:block;width:26px;text-align:center;font-size:8pt;color:#8892a4;font-weight:bold;">${c+1}</span>`;
+    h+='</div>';
+    for(let r=0;r<6;r++){
+      h+=`<div style="display:flex;gap:2px;margin-bottom:2px;align-items:center;"><span style="width:16px;font-size:8pt;color:#8892a4;font-weight:bold;">${String.fromCharCode(65+r)}</span>`;
+      for(let c=0;c<9;c++){
+        const ch=pt[c%pt.length];
+        const rank=letters.indexOf(ch.charCodeAt(0)-65);
+        const sb=subjects[rank],col=sb?cc(sb.ci):{bg:'#eee',bd:'#999',fg:'#333'};
+        h+=`<span style="display:block;width:26px;height:18px;line-height:18px;text-align:center;background:${col.bg};border:1px solid ${col.bd};color:${col.fg};border-radius:3px;font-size:8pt;font-weight:bold;">${ch}</span>`;
+      }
+      h+='</div>';
+    }
+    h+='<div style="font-size:9pt;margin-top:6px;color:#8892a4;">Letters run across (A B C A B C…) and repeat on every row. Each letter\'s roll numbers continue down the column, then on to its next column.</div>';
+    el.innerHTML=h;return;
+  }
+  if(getDir()==='row'){
+    let h='';
+    for(let r=0;r<6;r++){
+      const ch=pt[r%pt.length];
+      const rank=letters.indexOf(ch.charCodeAt(0)-65);
+      const sb=subjects[rank],col=sb?cc(sb.ci):{bg:'#eee',bd:'#999',fg:'#333'};
+      h+=`<div style="display:flex;gap:2px;margin-bottom:2px;align-items:center;"><span style="width:16px;font-size:8pt;color:#8892a4;font-weight:bold;">${String.fromCharCode(65+r)}</span>`;
+      for(let c=0;c<9;c++)h+=`<span style="display:block;width:26px;height:18px;line-height:18px;text-align:center;background:${col.bg};border:1px solid ${col.bd};color:${col.fg};border-radius:3px;font-size:8pt;font-weight:bold;">${ch}</span>`;
+      h+='</div>';
+    }
+    h+='<div style="font-size:9pt;margin-top:6px;color:#8892a4;">Each row = one subject (A1…A9 same). When a letter comes round again, roll numbers continue in order (A1-A9 → rolls 1-9, row D → rolls 10-18…).</div>';
+    el.innerHTML=h;return;
+  }
+  let html='<div style="display:inline-flex;gap:4px;">';
+  for(let c=0;c<8;c++){
+    html+='<div style="display:flex;flex-direction:column;gap:2px;">';
+    for(let r=0;r<5;r++){
+      const ch=pt[(c*5+r)%pt.length];
+      const rank=letters.indexOf(ch.charCodeAt(0)-65);
+      const s=subjects[rank],col=s?cc(s.ci):{bg:'#eee',bd:'#999',fg:'#333'};
+      html+=`<span style="display:block;width:26px;height:18px;line-height:18px;text-align:center;background:${col.bg};border:1px solid ${col.bd};color:${col.fg};border-radius:3px;font-size:8pt;font-weight:bold;">${ch}</span>`;
+    }
+    html+=`<div style="text-align:center;font-size:8pt;color:#8892a4;margin-top:2px;">${c+1}</div></div>`;
+  }
+  html+='</div><div style="font-size:9pt;margin-top:6px;color:#8892a4;">Seats fill down each column (A→E), then the next column. When a subject runs out, the next subject takes its letter.</div>';
+  el.innerHTML=html;
 }
 
 // ── ASSIGN ────────────────────────────────────
 function allAssigned(){return new Set(Object.values(assigns).flatMap(h=>Object.values(h).map(a=>a.studentId)));}
+// natural roll-number order (BE26MEA2 before BE26MEA10)
+function natCmp(a,b){return String(a.roll).localeCompare(String(b.roll),undefined,{numeric:true,sensitivity:'base'});}
+// one queue per subject (in subject order), students in roll-number order, only those not yet seated
+function subjQueues(used){
+  return subjects.map(sub=>
+    students.filter(s=>s.subjId===sub.id&&!used.has(s.id)).sort(natCmp)
+      .map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci})));
+}
 function fillHall(hall){
   const blk=new Set(hall.blocked),ex=assigns[hall.id]||{};
   const used=allAssigned();
-  const pat=getPat();
-  const newA={};
-
+  let pat=getPat();
+  let dirm=getDir();
   if(pat==='colorder'){
-    // Each column gets one subject cycling: col0=subj0, col1=subj1, col2=subj2, col3=subj0...
-    // Build per-subject queues in serial (roll) order
-    const qs=subjects.map(sub=>
-      students.filter(s=>s.subjId===sub.id&&!used.has(s.id))
-        .map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci}))
-    );
-    const qs2=qs.map(q=>[...q]);
-    for(let c=0;c<hall.cols;c++){
-      const si=c%subjects.length; // which subject fills this column
-      for(let r=0;r<hall.rows;r++){
-        const k=sk(r,c);
-        if(blk.has(k)||ex[k])continue;
-        if(qs2[si]?.length) newA[k]=qs2[si].shift();
-      }
-    }
-  } else if(pat==='subjorder'){
-    const seats=[];
-    for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])seats.push(k);}
-    const allQueue=subjects.flatMap(sub=>
-      students.filter(s=>s.subjId===sub.id&&!used.has(s.id))
-        .map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci}))
-    );
+    // Column Order = columns 1,2,3… get subjects A,B,C… (as many letters as there are columns/subjects).
+    // It now runs through the same slot engine, so subjects beyond the column count are brought in automatically.
+    const K=Math.max(1,Math.min(subjects.length,hall.cols,26));
+    pat=Array.from({length:K},(_,i)=>String.fromCharCode(65+i)).join('');
+    dirm='col';
+  }
+  const newA={};
+  const qs=subjQueues(used);
+  // free seats, filled DOWN each column first (A1,B1,C1… then A2,B2…)
+  const seats=[];
+  for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])seats.push(k);}
+
+  if(pat==='subjorder'){
+    const allQueue=qs.flat();
     seats.forEach((seat,i)=>{if(allQueue[i])newA[seat]=allQueue[i];});
   } else {
-    const seats=[];
-    for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])seats.push(k);}
+    // Pattern letters (A,B,C…) are "slots". At first slot A = 1st subject, B = 2nd subject …
+    // When the subject in a slot runs out of students, the NEXT unseated subject takes over that slot,
+    // so every subject gets seated (in subject order) — not only the first two.
     const patArr=pat.split('').map(ch=>ch.charCodeAt(0)-65);
-    const qs=subjects.map(sub=>students.filter(s=>s.subjId===sub.id&&!used.has(s.id)).map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci})));
-    const qs2=qs.map(q=>[...q]);let pi=0;
-    for(const seat of seats){let ok=false;
-      for(let a=0;a<patArr.length;a++){const sl2=patArr[(pi+a)%patArr.length];
-        if(qs2[sl2]?.length){newA[seat]=qs2[sl2].shift();pi=(pi+a+1)%patArr.length;ok=true;break;}}
-      if(!ok)break;}
+    const L=patArr.length;
+    const letters=[...new Set(patArr)].sort((x,y)=>x-y);
+    const rankOf={};letters.forEach((l,i)=>rankOf[l]=i);
+    const K=letters.length;
+    const slotSubj=new Array(K).fill(-1);
+    let nextSubj=0;
+    const refill=()=>{
+      for(let r=0;r<K;r++){
+        if(slotSubj[r]>=0&&qs[slotSubj[r]].length)continue;
+        slotSubj[r]=-1;
+        while(nextSubj<qs.length&&!qs[nextSubj].length)nextSubj++;
+        if(nextSubj<qs.length){slotSubj[r]=nextSubj;nextSubj++;}
+      }
+    };
+    if(dirm==='col'){
+      // COLUMN MODE: column 1 = letter 1, column 2 = letter 2 … (A B C A B C across); every row repeats the same.
+      // Seats fill top→bottom in each column, so roll numbers continue when the letter comes round again.
+      let done=false;
+      for(let c=0;c<hall.cols&&!done;c++){
+        for(let r=0;r<hall.rows;r++){
+          const k=sk(r,c);
+          if(blk.has(k)||ex[k])continue;
+          refill();
+          let placed=false;
+          for(let a=0;a<L;a++){
+            const si=slotSubj[rankOf[patArr[(c+a)%L]]];
+            if(si>=0&&qs[si].length){newA[k]=qs[si].shift();placed=true;break;}
+          }
+          if(!placed){done=true;break;}
+        }
+      }
+    }else if(dirm==='row'){
+      // ROW MODE: whole row = one subject (row A = pattern letter 1, row B = letter 2 …).
+      // Seats fill left→right; when a letter comes round again, roll numbers simply continue.
+      let done=false;
+      for(let r=0;r<hall.rows&&!done;r++){
+        for(let c=0;c<hall.cols;c++){
+          const k=sk(r,c);
+          if(blk.has(k)||ex[k])continue;
+          refill();
+          let placed=false;
+          for(let a=0;a<L;a++){   // a=0 → this row's own letter; others only if that subject is finished
+            const si=slotSubj[rankOf[patArr[(r+a)%L]]];
+            if(si>=0&&qs[si].length){newA[k]=qs[si].shift();placed=true;break;}
+          }
+          if(!placed){done=true;break;}
+        }
+      }
+    }else{
+      let pi=0;
+      for(const seat of seats){
+        refill();
+        let placed=false;
+        for(let a=0;a<L;a++){
+          const si=slotSubj[rankOf[patArr[(pi+a)%L]]];
+          if(si>=0&&qs[si].length){newA[seat]=qs[si].shift();pi=(pi+a+1)%L;placed=true;break;}
+        }
+        if(!placed)break;
+      }
+    }
   }
   assigns[hall.id]={...ex,...newA};
 }
@@ -1076,6 +1248,18 @@ function renderAss(){
   });
 }
 
+// ── QUESTION PAPER MATRIX (Hall × Subject counts) ──
+function questionMatrix(){
+  const hs=halls.filter(h=>Object.keys(assigns[h.id]||{}).length>0);
+  const subs=subjects.filter(sb=>hs.some(h=>Object.values(assigns[h.id]).some(a=>a.subjId===sb.id)));
+  const rows=hs.map(h=>{
+    const counts=subs.map(sb=>Object.values(assigns[h.id]).filter(a=>a.subjId===sb.id).length);
+    return{hall:h.name,counts,total:counts.reduce((x,y)=>x+y,0)};
+  });
+  const totals=subs.map((_,i)=>rows.reduce((x,r)=>x+r.counts[i],0));
+  return{subs,rows,totals,grand:totals.reduce((x,y)=>x+y,0)};
+}
+
 // ── BUILD PRINT HTML ──────────────────────────
 // Helper: compute seat ranges grouped by subject e.g. "1-5, 7-9 (Mathematics)"
 function seatRanges(entries){
@@ -1137,6 +1321,34 @@ function buildPrintHTML(){
       if(g.start.orig===g.end.orig) return g.start.orig;
       return g.start.orig+'–'+g.end.orig;
     }).join(', ');
+  }
+
+  // ── QUESTION PAPER COUNT — Hall × Subject, one page ──
+  {
+    const qm=questionMatrix();
+    if(qm.rows.length){
+      body+=`<div style="page-break-after:always;">`;
+      body+=`<h2 style="color:var(--accent2);border-bottom:3px solid var(--accent2);padding-bottom:6px;margin-bottom:6px;">Question Paper Requirement — Hall × Subject</h2>`;
+      body+=`<p style="margin:0 0 12px;font-size:10pt;color:#555;">Number of question papers needed in each hall, subject-wise.</p>`;
+      body+=`<table border="1" style="border-collapse:collapse;width:100%;font-size:11pt;text-align:center;">
+        <thead><tr style="background:var(--accent2);color:white;">
+          <th style="padding:8px 12px;text-align:left;">Class / Hall</th>`;
+      qm.subs.forEach(sb=>{
+        body+=`<th style="padding:8px 12px;">${sb.name}</th>`;
+      });
+      body+=`<th style="padding:8px 12px;background:#00695c;">Total</th></tr></thead><tbody>`;
+      qm.rows.forEach(r=>{
+        body+=`<tr><td style="padding:8px 12px;text-align:left;font-weight:bold;">${r.hall}</td>`;
+        r.counts.forEach(n=>{
+          body+=`<td style="padding:8px 12px;font-weight:bold;font-size:13pt;${n?'':'color:#bbb;'}">${n||'–'}</td>`;
+        });
+        body+=`<td style="padding:8px 12px;font-weight:bold;font-size:13pt;background:#eef3f6;">${r.total}</td></tr>`;
+      });
+      body+=`<tr style="background:#dde8f0;font-weight:bold;"><td style="padding:8px 12px;text-align:left;">Total</td>`;
+      qm.totals.forEach(n=>{body+=`<td style="padding:8px 12px;font-size:13pt;">${n}</td>`;});
+      body+=`<td style="padding:8px 12px;font-size:13pt;">${qm.grand}</td></tr></tbody></table>`;
+      body+=`</div>`;
+    }
   }
 
   // ── ALL HALLS SUMMARY — one page ──
@@ -1275,7 +1487,7 @@ function doCSV(){
     document.getElementById('expMsg').innerHTML='<div class="msg-err">No assignments to export yet.</div>';return;
   }
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
@@ -1283,6 +1495,432 @@ function doCSV(){
   document.body.appendChild(a);a.click();
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},500);
   document.getElementById('expMsg').innerHTML='<div class="msg-ok">✓ CSV downloaded!</div>';
+}
+
+
+// ── ROLL RANGES ("1 to 5, 7 to 8, 25, 45 to 47") ──
+function rollRangesTo(rolls){
+  const uniq=[...new Set(rolls.map(r=>String(r).trim()).filter(Boolean))];
+  if(!uniq.length)return'';
+  const parsed=uniq.map(r=>{
+    const m=r.match(/^(.*?)(\d+)$/);
+    return m?{orig:r,prefix:m[1],num:parseInt(m[2],10)}:{orig:r,prefix:r,num:NaN};
+  }).sort((x,y)=>x.prefix!==y.prefix?x.prefix.localeCompare(y.prefix):(isNaN(x.num)||isNaN(y.num))?0:x.num-y.num);
+  const groups=[];
+  let st=parsed[0],en=parsed[0];
+  for(let i=1;i<parsed.length;i++){
+    const cur=parsed[i];
+    if(cur.prefix===en.prefix&&!isNaN(cur.num)&&!isNaN(en.num)&&cur.num===en.num+1){en=cur;}
+    else{groups.push([st,en]);st=cur;en=cur;}
+  }
+  groups.push([st,en]);
+  return groups.map(g=>g[0].orig===g[1].orig?g[0].orig:g[0].orig+'-'+g[1].orig).join(', ');
+}
+// hall → subject → roll ranges (only students actually seated; absent / missing numbers break the range)
+function noticeData(){
+  const out=[];
+  halls.forEach(h=>{
+    const occ=Object.values(assigns[h.id]||{});
+    if(!occ.length)return;
+    const items=[];
+    subjects.forEach(sb=>{
+      const rs=occ.filter(a=>a.subjId===sb.id).map(a=>a.roll);
+      if(rs.length)items.push({subj:sb.name,ci:sb.ci,count:rs.length,text:rollRangesTo(rs)});
+    });
+    out.push({hall:h.name,items});
+  });
+  return out;
+}
+function buildNoticeHTML(){
+  const examN=document.getElementById('examName').value||'Exam';
+  const instN=document.getElementById('instName').value||'';
+  const dateV=document.getElementById('examDate').value;
+  const dateS=dateV?new Date(dateV+'T00:00:00').toLocaleDateString('en-IN',{dateStyle:'long'}):'';
+  const nd=noticeData();
+  let h=`<div style="text-align:center;border-bottom:3px solid #00897b;padding-bottom:10px;margin-bottom:16px;">
+    <div style="font-size:12pt;color:#555;">${instN}</div>
+    <h1 style="margin:4px 0;color:#00897b;font-size:22pt;">${examN}</h1>
+    <div style="font-size:15pt;font-weight:bold;">Seating Arrangement — Notice</div>
+    <div style="font-size:11pt;color:#555;margin-top:2px;">${dateS?'Date: '+dateS:''}</div></div>`;
+  h+=`<table border="1" style="border-collapse:collapse;width:100%;font-size:14pt;">
+    <thead><tr style="background:#00897b;color:white;">
+      <th style="padding:9px 12px;text-align:left;width:18%;">Classroom</th>
+      <th style="padding:9px 12px;text-align:left;width:24%;">Subject</th>
+      <th style="padding:9px 12px;text-align:left;">Roll Numbers</th></tr></thead><tbody>`;
+  nd.forEach(g=>{
+    g.items.forEach((it,i)=>{
+      const c=cc(it.ci);
+      h+=`<tr style="page-break-inside:avoid;">`;
+      if(i===0)h+=`<td rowspan="${g.items.length}" style="padding:9px 12px;font-weight:bold;font-size:16pt;vertical-align:middle;background:#eef3f6;">${g.hall}</td>`;
+      h+=`<td style="padding:9px 12px;font-weight:bold;color:${c.fg};background:${c.bg};">${it.subj}</td>
+          <td style="padding:9px 12px;font-weight:bold;">${it.text}</td></tr>`;
+    });
+  });
+  h+='</tbody></table>';
+  return h;
+}
+
+// ── PDF DOWNLOAD ──
+function makePDF(html,fname,orient,width,hallBreaks,msgId){
+  const msg=document.getElementById(msgId||'expMsg');
+  if(typeof html2pdf==='undefined'){msg.innerHTML='<div class="msg-err">PDF library not loaded (check internet connection).</div>';return;}
+  const box=document.createElement('div');
+  // NOTE: no off-screen positioning here — html2pdf clones this element, and a clone placed at left:-99999px renders as a blank page
+  box.style.cssText='width:'+width+'px;background:#fff;color:#000;font-family:Arial,sans-serif;padding:10px;';
+  box.innerHTML=html;
+  if(hallBreaks){
+    // each hall's seating chart starts on a new page
+    [...box.children].forEach(el=>{
+      if(el.tagName==='H2'){
+        const prev=el.previousElementSibling;
+        if(!(prev&&prev.style.pageBreakAfter==='always'))el.style.pageBreakBefore='always';
+      }
+    });
+  }
+  const btns=document.querySelectorAll('.pdfbtn');btns.forEach(b=>b.disabled=true);
+  msg.innerHTML='<div class="info-box">⏳ Creating PDF…</div>';
+  const done=()=>{btns.forEach(b=>b.disabled=false);};
+  html2pdf().set({
+    margin:8,filename:fname,
+    image:{type:'jpeg',quality:0.97},
+    html2canvas:{scale:1.5,useCORS:true,backgroundColor:'#ffffff'},
+    jsPDF:{unit:'mm',format:'a4',orientation:orient},
+    pagebreak:{mode:['css','legacy']}
+  }).from(box).save().then(()=>{
+    done();msg.innerHTML='<div class="msg-ok">✓ PDF downloaded!</div>';
+  }).catch(e=>{
+    done();msg.innerHTML='<div class="msg-err">✗ PDF failed: '+(e&&e.message||e)+'</div>';
+  });
+}
+function hasAnyAssign(){return halls.some(h=>Object.keys(assigns[h.id]||{}).length>0);}
+function doPDF(){
+  if(!hasAnyAssign()){document.getElementById('expMsg').innerHTML='<div class="msg-err">No assignments to export yet. Go to Setup → ⚡⚡ Assign ALL.</div>';return;}
+  const maxCols=Math.max(...halls.map(h=>h.cols));
+  const w=Math.max(1040,maxCols*64+Math.ceil(maxCols/3)*12+80);
+  const fname=(document.getElementById('examName').value||'exam').replace(/\s+/g,'_')+'_seating.pdf';
+  makePDF(buildPrintHTML(),fname,'landscape',w,true);
+}
+function doNoticePDF(){
+  if(!hasAnyAssign()){document.getElementById('expMsg').innerHTML='<div class="msg-err">No assignments to export yet. Go to Setup → ⚡⚡ Assign ALL.</div>';return;}
+  const fname=(document.getElementById('examName').value||'exam').replace(/\s+/g,'_')+'_notice_board.pdf';
+  makePDF(buildNoticeHTML(),fname,'portrait',780,false);
+}
+
+// ── ABSENTEES ─────────────────────────────────
+let absentTxt={}; // 'hallId|subjId' -> typed text
+function parseAbsent(text,rolls){
+  const lower=new Map(rolls.map(r=>[String(r).toLowerCase(),r]));
+  const absent=new Set(),unknown=[];
+  String(text||'').split(/[,;\n]+/).forEach(t=>{
+    const tok=t.trim();if(!tok)return;
+    const lo=tok.toLowerCase();
+    if(lower.has(lo)){absent.add(lower.get(lo));return;}
+    const m=tok.match(/^(.*?)(\d+)\s*[-–]\s*(.*?)(\d+)$/);
+    if(m&&(m[3]===''||m[3].toLowerCase()===m[1].toLowerCase())){
+      let a=parseInt(m[2],10),b=parseInt(m[4],10),w=m[2].length,found=0;
+      if(a>b){const x=a;a=b;b=x;}
+      if(b-a<=5000){
+        for(let n=a;n<=b;n++){
+          const cand=(m[1]+String(n).padStart(w,'0')).toLowerCase();
+          if(lower.has(cand)){absent.add(lower.get(cand));found++;}
+        }
+      }
+      if(!found)unknown.push(tok);
+      return;
+    }
+    unknown.push(tok);
+  });
+  return{absent:[...absent],unknown};
+}
+function attData(){
+  const out=[];
+  halls.forEach(h=>{
+    const occ=Object.values(assigns[h.id]||{});
+    subjects.forEach(sb=>{
+      const rolls=occ.filter(a=>a.subjId===sb.id).map(a=>a.roll);
+      if(!rolls.length)return;
+      const key=h.id+'|'+sb.id,txt=absentTxt[key]||'';
+      const r=parseAbsent(txt,rolls);
+      const ab=new Set(r.absent);
+      out.push({hall:h,subj:sb,key,rolls,txt,absent:r.absent,unknown:r.unknown,present:rolls.filter(x=>!ab.has(x))});
+    });
+  });
+  return out;
+}
+function renderAbsent(){
+  const tb=document.getElementById('absTb');if(!tb)return;
+  tb.innerHTML='';
+  const data=attData();
+  if(!data.length){
+    tb.innerHTML='<tr><td colspan="6" style="text-align:center;color:#888;font-size:10pt;">No assignments yet. Go to Setup → ⚡⚡ Assign ALL.</td></tr>';
+    return;
+  }
+  data.forEach(d=>{
+    const c=cc(d.subj.ci);
+    const tr=document.createElement('tr');
+    const tdH=document.createElement('td');tdH.style.fontWeight='bold';tdH.textContent=d.hall.name;
+    const tdS=document.createElement('td');
+    tdS.innerHTML=`<span class="spill" style="background:${c.bg};border-color:${c.bd};color:${c.fg};">${d.subj.name}</span>`;
+    const tdR=document.createElement('td');tdR.style.fontFamily='monospace';tdR.textContent=rollRangesTo(d.rolls);
+    const tdA=document.createElement('td');
+    const inp=document.createElement('input');
+    inp.type='text';inp.className='form-control form-control-sm';inp.placeholder='e.g. 3, 7-9, 21';inp.value=d.txt;
+    const warn=document.createElement('div');warn.style.cssText='font-size:8.5pt;color:#f5a0a0;';
+    tdA.appendChild(inp);tdA.appendChild(warn);
+    const tdT=document.createElement('td');tdT.style.cssText='text-align:center;font-weight:bold;';
+    const tdP=document.createElement('td');tdP.style.fontFamily='monospace';
+    const upd=()=>{
+      const cur=attData().find(x=>x.key===d.key);if(!cur)return;
+      tdT.textContent=cur.absent.length;
+      tdT.style.color=cur.absent.length?'var(--danger)':'';
+      tdP.textContent=rollRangesTo(cur.present)+(cur.present.length?'  ('+cur.present.length+')':'');
+      warn.textContent=cur.unknown.length?'Not found in this hall/subject: '+cur.unknown.join(', '):'';
+    };
+    inp.oninput=()=>{absentTxt[d.key]=inp.value;upd();};
+    upd();
+    [tdH,tdS,tdR,tdA,tdT,tdP].forEach(t=>tr.appendChild(t));
+    tb.appendChild(tr);
+  });
+}
+function clearAbsent(){absentTxt={};renderAbsent();document.getElementById('absMsg').innerHTML='<div class="msg-ok">✓ Absentees cleared.</div>';}
+function buildAttendanceHTML(blank){
+  const examN=document.getElementById('examName').value||'Exam';
+  const instN=document.getElementById('instName').value||'';
+  const dateV=document.getElementById('examDate').value;
+  const dateS=dateV?new Date(dateV+'T00:00:00').toLocaleDateString('en-IN',{dateStyle:'long'}):'';
+  const data=attData();
+  let h=`<div style="text-align:center;border-bottom:3px solid #00897b;padding-bottom:8px;margin-bottom:14px;">
+    <div style="font-size:11pt;color:#555;">${instN}</div>
+    <h1 style="margin:3px 0;color:#00897b;font-size:20pt;">${examN}</h1>
+    <div style="font-size:14pt;font-weight:bold;">${blank?'Absentee Entry Sheet':'Attendance Report'}</div>
+    <div style="font-size:10.5pt;color:#555;margin-top:2px;">${dateS?'Date: '+dateS:''}</div></div>`;
+  h+=`<table border="1" style="border-collapse:collapse;width:100%;font-size:11.5pt;">
+    <thead><tr style="background:#00897b;color:white;">
+      <th style="padding:8px 10px;text-align:left;width:11%;">Hall</th>
+      <th style="padding:8px 10px;text-align:left;width:14%;">Subject</th>
+      <th style="padding:8px 10px;text-align:left;width:22%;">Roll Numbers</th>
+      <th style="padding:8px 10px;text-align:left;width:19%;">Absentees</th>
+      <th style="padding:8px 10px;text-align:center;width:9%;">Total Absent</th>
+      <th style="padding:8px 10px;text-align:left;">Present Roll Numbers</th></tr></thead><tbody>`;
+  const byHall=[];
+  data.forEach(d=>{let g=byHall.find(x=>x.hall.id===d.hall.id);if(!g){g={hall:d.hall,items:[]};byHall.push(g);}g.items.push(d);});
+  let totAbs=0,totPres=0;
+  byHall.forEach(g=>{
+    g.items.forEach((d,i)=>{
+      const c=cc(d.subj.ci);
+      totAbs+=d.absent.length;totPres+=d.present.length;
+      h+=`<tr style="page-break-inside:avoid;height:${blank?'52px':'auto'};">`;
+      if(i===0)h+=`<td rowspan="${g.items.length}" style="padding:8px 10px;font-weight:bold;font-size:13pt;background:#eef3f6;vertical-align:middle;">${g.hall.name}</td>`;
+      h+=`<td style="padding:8px 10px;font-weight:bold;color:${c.fg};background:${c.bg};">${d.subj.name}</td>
+          <td style="padding:8px 10px;font-weight:bold;">${rollRangesTo(d.rolls)}</td>`;
+      if(blank){
+        h+=`<td></td><td></td><td></td></tr>`;
+      }else{
+        h+=`<td style="padding:8px 10px;font-weight:bold;color:#b00020;">${d.absent.length?rollRangesTo(d.absent):'—'}</td>
+            <td style="padding:8px 10px;text-align:center;font-weight:bold;font-size:13pt;">${d.absent.length}</td>
+            <td style="padding:8px 10px;font-weight:bold;">${rollRangesTo(d.present)}<div style="font-size:9pt;font-weight:normal;color:#555;">${d.present.length} student(s)</div></td></tr>`;
+      }
+    });
+  });
+  if(!blank){
+    h+=`<tr style="background:#dde8f0;font-weight:bold;"><td colspan="4" style="padding:8px 10px;text-align:right;">Grand Total</td>
+      <td style="padding:8px 10px;text-align:center;font-size:13pt;">${totAbs}</td>
+      <td style="padding:8px 10px;">${totPres} present</td></tr>`;
+  }
+  h+='</tbody></table>';
+  h+=`<div style="margin-top:34px;display:flex;justify-content:space-between;font-size:11pt;"><div>Invigilator: ______________________</div><div>Signature: ______________________</div></div>`;
+  return h;
+}
+function doBlankAbsentPDF(){
+  if(!hasAnyAssign()){document.getElementById('absMsg').innerHTML='<div class="msg-err">No assignments yet. Go to Setup → ⚡⚡ Assign ALL.</div>';return;}
+  const fname=(document.getElementById('examName').value||'exam').replace(/\s+/g,'_')+'_absentee_entry_sheet.pdf';
+  makePDF(buildAttendanceHTML(true),fname,'landscape',1040,false,'absMsg');
+}
+function doAttendancePDF(){
+  if(!hasAnyAssign()){document.getElementById('absMsg').innerHTML='<div class="msg-err">No assignments yet. Go to Setup → ⚡⚡ Assign ALL.</div>';return;}
+  const fname=(document.getElementById('examName').value||'exam').replace(/\s+/g,'_')+'_attendance_report.pdf';
+  makePDF(buildAttendanceHTML(false),fname,'landscape',1040,false,'absMsg');
+}
+
+// ── EXCEL EXPORT ──────────────────────────────
+function seatingRows(includePending){
+  const rows=[['S.No.','Roll No','Student Name','Subject','Hall','Seat']];
+  let i=1;const seated=new Set();
+  halls.forEach(hall=>{
+    Object.entries(assigns[hall.id]||{}).forEach(([key,val])=>{
+      const[r,c]=key.split('-').map(Number);
+      rows.push([i++,val.roll,val.name,val.subjName,hall.name,sl(r,c)]);
+      seated.add(val.studentId);
+    });
+  });
+  if(includePending){
+    students.filter(s=>!seated.has(s.id)).forEach(s=>{
+      const sub=subjects.find(x=>x.id===s.subjId);
+      rows.push([i++,s.roll,s.name,sub?sub.name:'','','']);
+    });
+  }
+  return rows;
+}
+function doExcel(){
+  const msg=document.getElementById('expMsg');
+  if(typeof XLSX==='undefined'){msg.innerHTML='<div class="msg-err">Excel library not loaded (check internet connection).</div>';return;}
+  const rows=seatingRows(true);
+  if(rows.length===1){msg.innerHTML='<div class="msg-err">Nothing to export yet.</div>';return;}
+  const wb=XLSX.utils.book_new();
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:6},{wch:12},{wch:28},{wch:18},{wch:14},{wch:8}];
+  XLSX.utils.book_append_sheet(wb,ws,'Seating');
+  const ad=attData();
+  if(ad.length){
+    const aa=[['Hall','Subject','Roll Numbers','Absentees','Total Absent','Present Count','Present Roll Numbers']];
+    ad.forEach(d=>aa.push([d.hall.name,d.subj.name,rollRangesTo(d.rolls),rollRangesTo(d.absent),d.absent.length,d.present.length,rollRangesTo(d.present)]));
+    const ash=XLSX.utils.aoa_to_sheet(aa);
+    ash['!cols']=[{wch:14},{wch:18},{wch:36},{wch:24},{wch:12},{wch:13},{wch:44}];
+    XLSX.utils.book_append_sheet(wb,ash,'Attendance');
+  }
+  const nd=noticeData();
+  if(nd.length){
+    const na=[['Classroom','Subject','Roll Numbers']];
+    nd.forEach(g=>g.items.forEach(it=>na.push([g.hall,it.subj,it.text])));
+    const nsh=XLSX.utils.aoa_to_sheet(na);
+    nsh['!cols']=[{wch:16},{wch:20},{wch:60}];
+    XLSX.utils.book_append_sheet(wb,nsh,'Notice Board');
+  }
+  const qm=questionMatrix();
+  if(qm.rows.length){
+    const qa=[['Class / Hall'].concat(qm.subs.map(x=>x.name),['Total'])];
+    qm.rows.forEach(r=>qa.push([r.hall].concat(r.counts,[r.total])));
+    qa.push(['Total'].concat(qm.totals,[qm.grand]));
+    const qs=XLSX.utils.aoa_to_sheet(qa);
+    qs['!cols']=[{wch:16}].concat(qm.subs.map(()=>({wch:16})),[{wch:8}]);
+    XLSX.utils.book_append_sheet(wb,qs,'Question Papers');
+  }
+  const hs=[['Hall','Rows','Cols','Blocked Seats']].concat(halls.map(h=>[
+    h.name,h.rows,h.cols,
+    h.blocked.map(k=>{const[r,c]=k.split('-').map(Number);return sl(r,c);}).join(', ')
+  ]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(hs),'Halls');
+  const ss=[['Subject','Color No']].concat(subjects.map(x=>[x.name,x.ci+1]));
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(ss),'Subjects');
+  const inf=[['Exam Name',document.getElementById('examName').value],
+             ['Date',document.getElementById('examDate').value],
+             ['Institution',document.getElementById('instName').value]];
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(inf),'Info');
+  XLSX.writeFile(wb,(document.getElementById('examName').value||'exam').replace(/\s+/g,'_')+'_seating.xlsx');
+  msg.innerHTML='<div class="msg-ok">✓ Excel file downloaded!</div>';
+}
+
+// ── EXCEL / CSV IMPORT ────────────────────────
+function parseSeat(t){
+  const m=/^([A-Za-z])\s*0*(\d+)$/.exec(String(t).trim());
+  if(!m)return null;
+  const r=m[1].toUpperCase().charCodeAt(0)-65,c=+m[2]-1;
+  return c>=0?{r,c}:null;
+}
+function onSeatFile(input){
+  const file=input.files[0];if(!file)return;
+  const msg=document.getElementById('impMsg');
+  if(typeof XLSX==='undefined'){msg.innerHTML='<div class="msg-err">Excel library not loaded (check internet connection).</div>';input.value='';return;}
+  const isText=/\.(csv|txt|tsv)$/i.test(file.name);
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=isText?XLSX.read(e.target.result,{type:'string'}):XLSX.read(e.target.result,{type:'array'});
+      importWorkbook(wb);
+    }catch(err){
+      msg.innerHTML='<div class="msg-err">✗ Could not read file: '+(err.message||err)+'</div>';
+    }
+    input.value='';
+  };
+  reader.onerror=()=>{msg.innerHTML='<div class="msg-err">✗ Could not read file.</div>';input.value='';};
+  if(isText)reader.readAsText(file);else reader.readAsArrayBuffer(file);
+}
+function importWorkbook(wb){
+  const msg=document.getElementById('impMsg');
+  const err=t=>{msg.innerHTML='<div class="msg-err">✗ '+t+'</div>';};
+  const sheet=n=>{const k=wb.SheetNames.find(x=>x.trim().toLowerCase()===n);return k?wb.Sheets[k]:null;};
+  const grid=ws=>ws?XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false}).map(r=>r.map(v=>String(v).trim())):[];
+
+  const rows=grid(sheet('seating')||wb.Sheets[wb.SheetNames[0]]);
+  if(!rows.length){err('The file is empty.');return;}
+
+  // locate header row & columns
+  let hi=rows.findIndex(r=>r.some(v=>/roll/i.test(v))&&r.some(v=>/name/i.test(v)));
+  let col={roll:1,name:2,subj:3,hall:4,seat:5};
+  if(hi>=0){
+    const h=rows[hi].map(v=>v.toLowerCase());
+    const f=re=>h.findIndex(v=>re.test(v));
+    col={roll:f(/roll/),name:f(/name/),subj:f(/subject/),hall:f(/hall/),seat:f(/seat/)};
+    if(col.name<0||col.subj<0){err('Could not find "Student Name" and "Subject" columns.');return;}
+  }
+  const data=rows.slice(hi+1);
+
+  const newSubjects=[],newHalls=[],newStudents=[],newAssigns={};
+  let sidN=1,hidN=1;
+  const addSubj=(name,ci)=>{
+    let x=newSubjects.find(q=>q.name.toLowerCase()===name.toLowerCase());
+    if(!x){x={id:sidN++,name,ci:((ci!=null&&isFinite(ci)?ci:newSubjects.length)%COLORS.length+COLORS.length)%COLORS.length};newSubjects.push(x);}
+    return x;
+  };
+  const addHallN=(name,r,c,blocked)=>{
+    let x=newHalls.find(q=>q.name.toLowerCase()===name.toLowerCase());
+    if(!x){x={id:hidN++,name,rows:r||5,cols:c||9,blocked:blocked||[]};newHalls.push(x);}
+    return x;
+  };
+
+  // optional sheets (present in .xlsx exported by this system)
+  grid(sheet('subjects')).slice(1).forEach(r=>{if(r[0])addSubj(r[0],(parseInt(r[1])||1)-1);});
+  grid(sheet('halls')).slice(1).forEach(r=>{
+    if(!r[0])return;
+    const rr=Math.max(1,Math.min(26,parseInt(r[1])||5)),cc2=Math.max(1,Math.min(20,parseInt(r[2])||9));
+    const bl=(r[3]||'').split(/[,;\s]+/).map(parseSeat).filter(Boolean).map(p=>sk(p.r,p.c));
+    addHallN(r[0],rr,cc2,bl);
+  });
+  const info=grid(sheet('info'));
+
+  // student rows
+  let skipped=0,seated=0,pending=0,conflicts=0;
+  data.forEach((r,i)=>{
+    const name=r[col.name]||'',subjTxt=r[col.subj]||'';
+    if(!name||!subjTxt){if(r.some(v=>v))skipped++;return;}
+    const roll=(col.roll>=0&&r[col.roll])||('R'+String(newStudents.length+1).padStart(3,'0'));
+    const subj=addSubj(subjTxt);
+    const stu={id:roll+'_'+Date.now()+'_'+i,name,roll,subjId:subj.id};
+    newStudents.push(stu);
+    const hallTxt=col.hall>=0?r[col.hall]:'',seatTxt=col.seat>=0?r[col.seat]:'';
+    if(!hallTxt||!seatTxt){pending++;return;}
+    const p=parseSeat(seatTxt);
+    if(!p||p.c>19){pending++;return;}
+    const hall=addHallN(hallTxt);
+    if(p.r+1>hall.rows)hall.rows=p.r+1;
+    if(p.c+1>hall.cols)hall.cols=p.c+1;
+    const key=sk(p.r,p.c);
+    if(!newAssigns[hall.id])newAssigns[hall.id]={};
+    if(newAssigns[hall.id][key]){conflicts++;pending++;return;}
+    newAssigns[hall.id][key]={studentId:stu.id,name,roll,subjId:subj.id,subjName:subj.name,ci:subj.ci};
+    hall.blocked=hall.blocked.filter(k=>k!==key);
+    seated++;
+  });
+  if(!newStudents.length){err('No valid student rows found.');return;}
+
+  if(students.length&&!confirm('Importing will replace the current students, subjects, halls and assignments. Continue?'))return;
+
+  subjects=newSubjects;students=newStudents;assigns=newAssigns;sid=sidN;
+  if(newHalls.length){halls=newHalls;hid=hidN;}else{assigns={};}
+  activeHall=halls[0].id;selColor=0;
+  info.forEach(r=>{
+    const k=(r[0]||'').toLowerCase(),v=r[1]||'';if(!v)return;
+    if(k==='exam name')document.getElementById('examName').value=v;
+    else if(k==='date')document.getElementById('examDate').value=v;
+    else if(k==='institution')document.getElementById('instName').value=v;
+  });
+
+  renderSubj();renderHalls();renderStu();initSwatches();
+  buildHTabs('hallTabs1');buildHTabs('hallTabs2');
+  renderGrid();renderAss();updateStats();
+  msg.innerHTML=`<div class="msg-ok">✓ Imported ${newStudents.length} students · ${seated} seated · ${pending} pending`
+    +(conflicts?` · ${conflicts} seat conflict(s)`:'')+(skipped?` · ${skipped} row(s) skipped`:'')+'.</div>';
+  flash('✓ Import complete','ok');
 }
 
 // ── STATS ─────────────────────────────────────
