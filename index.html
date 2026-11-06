@@ -277,6 +277,7 @@ input[type=number],input[type=text],input[type=date],textarea,select{color-schem
               <label style="cursor:pointer;"><input type="radio" name="pdir" value="col" checked onchange="renderPrev()"> <b>Across</b> — columns 1,2,3… = A,B,C…; every row repeats A B C A B C ✓ Recommended</label><br>
               <label style="cursor:pointer;"><input type="radio" name="pdir" value="row" onchange="renderPrev()"> <b>Down</b> — whole row = one subject (row A = A, row B = B…)</label><br>
               <label style="cursor:pointer;"><input type="radio" name="pdir" value="seat" onchange="renderPrev()"> Seat-by-seat (down each column)</label>
+              <label style="cursor:pointer;display:block;margin-top:6px;"><input type="checkbox" id="noAdj" checked> 🚫 <b>Never seat the same subject side by side</b> (copying risk) — such seats are left empty and those students stay <b>Pending</b> for the next hall</label>
             </div>
             <div id="patLeg" class="mb-2"></div>
             <div class="info-box mb-2"><b>Preview:</b><br><div id="patPrev" style="margin-top:5px;"></div></div>
@@ -944,6 +945,7 @@ function subjQueues(used){
     students.filter(s=>s.subjId===sub.id&&!used.has(s.id)).sort(natCmp)
       .map(s=>({studentId:s.id,name:s.name,roll:s.roll,subjId:sub.id,subjName:sub.name,ci:sub.ci})));
 }
+function noAdjOn(){const e=document.getElementById('noAdj');return !e||e.checked;}
 function fillHall(hall){
   const blk=new Set(hall.blocked),ex=assigns[hall.id]||{};
   const used=allAssigned();
@@ -951,24 +953,28 @@ function fillHall(hall){
   let dirm=getDir();
   if(pat==='colorder'){
     // Column Order = columns 1,2,3… get subjects A,B,C… (as many letters as there are columns/subjects).
-    // It now runs through the same slot engine, so subjects beyond the column count are brought in automatically.
+    // Subjects beyond the column count are brought in automatically when a column's subject finishes.
     const K=Math.max(1,Math.min(subjects.length,hall.cols,26));
     pat=Array.from({length:K},(_,i)=>String.fromCharCode(65+i)).join('');
     dirm='col';
   }
   const newA={};
   const qs=subjQueues(used);
-  // free seats, filled DOWN each column first (A1,B1,C1… then A2,B2…)
-  const seats=[];
-  for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])seats.push(k);}
+
+  // free seats: row-major for "row" mode, otherwise down each column first
+  const order=[];
+  if(dirm==='row'){
+    for(let r=0;r<hall.rows;r++)for(let c=0;c<hall.cols;c++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])order.push({r,c,k});}
+  }else{
+    for(let c=0;c<hall.cols;c++)for(let r=0;r<hall.rows;r++){const k=sk(r,c);if(!blk.has(k)&&!ex[k])order.push({r,c,k});}
+  }
 
   if(pat==='subjorder'){
     const allQueue=qs.flat();
-    seats.forEach((seat,i)=>{if(allQueue[i])newA[seat]=allQueue[i];});
-  } else {
-    // Pattern letters (A,B,C…) are "slots". At first slot A = 1st subject, B = 2nd subject …
-    // When the subject in a slot runs out of students, the NEXT unseated subject takes over that slot,
-    // so every subject gets seated (in subject order) — not only the first two.
+    order.forEach((o,i)=>{if(allQueue[i])newA[o.k]=allQueue[i];});
+  }else{
+    // Pattern letters (A,B,C…) are "slots": at first A = 1st subject, B = 2nd … When the subject in a slot
+    // runs out, the NEXT unseated subject takes over that slot — so any number of subjects get seated.
     const patArr=pat.split('').map(ch=>ch.charCodeAt(0)-65);
     const L=patArr.length;
     const letters=[...new Set(patArr)].sort((x,y)=>x-y);
@@ -984,51 +990,31 @@ function fillHall(hall){
         if(nextSubj<qs.length){slotSubj[r]=nextSubj;nextSubj++;}
       }
     };
-    if(dirm==='col'){
-      // COLUMN MODE: column 1 = letter 1, column 2 = letter 2 … (A B C A B C across); every row repeats the same.
-      // Seats fill top→bottom in each column, so roll numbers continue when the letter comes round again.
-      let done=false;
-      for(let c=0;c<hall.cols&&!done;c++){
-        for(let r=0;r<hall.rows;r++){
-          const k=sk(r,c);
-          if(blk.has(k)||ex[k])continue;
-          refill();
-          let placed=false;
-          for(let a=0;a<L;a++){
-            const si=slotSubj[rankOf[patArr[(c+a)%L]]];
-            if(si>=0&&qs[si].length){newA[k]=qs[si].shift();placed=true;break;}
-          }
-          if(!placed){done=true;break;}
+    // ── "no same subject side by side" rule ──
+    // checked against the neighbours the chosen layout is meant to keep different
+    const distinct=L>1&&patArr.every((x,i)=>x!==patArr[(i+1)%L]);
+    const enforce=noAdjOn()&&distinct;
+    const dirs=dirm==='col'?[[0,-1],[0,1]]:dirm==='row'?[[-1,0],[1,0]]:[[0,-1],[0,1],[-1,0],[1,0]];
+    const at=(r,c)=>newA[sk(r,c)]||ex[sk(r,c)];
+    const okAt=(r,c,subjId)=>{
+      if(!enforce)return true;
+      for(const [dr,dc] of dirs){const nb=at(r+dr,c+dc);if(nb&&nb.subjId===subjId)return false;}
+      return true;
+    };
+    let pi=0;
+    for(const sd of order){
+      if(!qs.some(q=>q.length))break;      // everyone seated
+      refill();
+      const base=dirm==='seat'?pi:(dirm==='col'?sd.c:sd.r);
+      for(let a=0;a<L;a++){                 // a=0 → this column/row's own letter; others only as fallback
+        const si=slotSubj[rankOf[patArr[(base+a)%L]]];
+        if(si>=0&&qs[si].length&&okAt(sd.r,sd.c,qs[si][0].subjId)){
+          newA[sd.k]=qs[si].shift();
+          if(dirm==='seat')pi=(pi+a+1)%L;
+          break;
         }
       }
-    }else if(dirm==='row'){
-      // ROW MODE: whole row = one subject (row A = pattern letter 1, row B = letter 2 …).
-      // Seats fill left→right; when a letter comes round again, roll numbers simply continue.
-      let done=false;
-      for(let r=0;r<hall.rows&&!done;r++){
-        for(let c=0;c<hall.cols;c++){
-          const k=sk(r,c);
-          if(blk.has(k)||ex[k])continue;
-          refill();
-          let placed=false;
-          for(let a=0;a<L;a++){   // a=0 → this row's own letter; others only if that subject is finished
-            const si=slotSubj[rankOf[patArr[(r+a)%L]]];
-            if(si>=0&&qs[si].length){newA[k]=qs[si].shift();placed=true;break;}
-          }
-          if(!placed){done=true;break;}
-        }
-      }
-    }else{
-      let pi=0;
-      for(const seat of seats){
-        refill();
-        let placed=false;
-        for(let a=0;a<L;a++){
-          const si=slotSubj[rankOf[patArr[(pi+a)%L]]];
-          if(si>=0&&qs[si].length){newA[seat]=qs[si].shift();pi=(pi+a+1)%L;placed=true;break;}
-        }
-        if(!placed)break;
-      }
+      // nobody can sit here without being next to the same subject → seat stays empty (students stay Pending)
     }
   }
   assigns[hall.id]={...ex,...newA};
